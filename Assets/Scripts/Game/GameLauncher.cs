@@ -342,6 +342,19 @@ end)
             GameRenderClient.Instance?.SendEquipTool(
                 Convert.ToString(name) ?? "",
                 Convert.ToString(key)  ?? ""));
+        // Interface panel: React sends the full HudButton array as JSON whenever
+        // the creator adds, edits, or removes a button. The string is stored in
+        // SceneSettings and captured by the next autosave.
+        renderer.Globals["editorSetHudButtons"] = new Action<object>(json =>
+        {
+            SceneSettings.HudButtonsJson = Convert.ToString(json) ?? "";
+            EditorCameraController.MarkStateDirty();
+        });
+        // In-game: React fires this when a HudButton with action="event" is tapped.
+        // Routes to the active GameRenderClient which ships it over WebSocket so
+        // the Lua script can listen via Events.On("hudButton:<name>", fn).
+        renderer.Globals["fireHudEvent"] = new Action<object>(name =>
+            GameRenderClient.Instance?.FireHudEvent(Convert.ToString(name) ?? ""));
 
         // ── Terrain Builder bridges ────────────────────────────────────────
         // React (CreateScreen.tsx, terrain-mode top bar) routes its tool taps
@@ -699,16 +712,20 @@ end)
 
         // Returning from play-test? Restore the exact live state captured when
         // Play was pressed, not the server's potentially-stale autosave.
+        // Keep a local copy: if data.gameCode is empty, the private LaunchAsync
+        // does a second GetGame fetch and overwrites data entirely, losing our inject.
+        string playReturnState = null;
         if (editMode && data != null
             && _playReturnEditorState != null
             && _playReturnGameId == gameId)
         {
+            playReturnState        = _playReturnEditorState;
             data.editorStateJson   = _playReturnEditorState;
             _playReturnEditorState = null;
             _playReturnGameId      = -1;
         }
 
-        await LaunchAsync(data, error, editMode, skipOrientation);
+        await LaunchAsync(data, error, editMode, skipOrientation, playReturnState);
     }
 
     // Transitions from editor preview to local play mode without going through
@@ -793,7 +810,7 @@ end)
 
     // ── Internal launch flow ──────────────────────────────────────────────────
 
-    private async Task LaunchAsync(GameData data, string preFetchError, bool editMode = false, bool skipOrientation = false)
+    private async Task LaunchAsync(GameData data, string preFetchError, bool editMode = false, bool skipOrientation = false, string playReturnEditorState = null)
     {
         _gameCts?.Cancel();
         _gameCts = new CancellationTokenSource();
@@ -839,6 +856,9 @@ end)
                     e => { tcs.TrySetResult(false); }));
                 await tcs.Task;
                 if (full != null) data = full;
+                // Re-inject the play-return stash: the secondary fetch just overwrote data.
+                if (playReturnEditorState != null)
+                    data.editorStateJson = playReturnEditorState;
             }
 
             // A draft with no script yet (still generating, or a generation that
