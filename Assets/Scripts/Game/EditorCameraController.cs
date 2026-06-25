@@ -126,17 +126,17 @@ public class EditorCameraController : MonoBehaviour
     // Per-axis dead zones — cumulative motion since the second finger
     // landed must exceed these before that axis engages. They don't lock
     // out the other axes; the others engage independently.
-    private const float PinchDeadZonePx  = 30f;
-    private const float TwistDeadZoneDeg = 8f;
-    private const float TiltDeadZonePx   = 35f;
+    private const float PinchDeadZonePx  = 16f;  // was 30 — engages faster, less latency
+    private const float TwistDeadZoneDeg = 6f;   // was 8
+    private const float TiltDeadZonePx   = 20f;  // was 35 — tilt feels immediate now
 
     // Tilt sensitivity (degrees of pitch per pixel of vertical finger travel)
     // scales with how close the camera is to the ground. Near top-down the
     // camera sits high, so a gentle gain keeps the overhead view controllable;
     // near the horizon the camera is low to the ground, so the same swipe
     // sweeps more pitch. Interpolated by pitch between these two endpoints.
-    private const float TiltGainTopDown = 0.3f;  // at PitchMax — camera is high
-    private const float TiltGainGround  = 0.6f;  // at PitchMin — camera is low
+    private const float TiltGainTopDown = 0.42f; // was 0.3 — more direct tilt feel
+    private const float TiltGainGround  = 0.72f; // was 0.6
 
     // Gesture-midpoint anchor. Captured at touch begin (single-finger
     // fingertip OR two-finger midpoint). Each frame, _pivot is solved
@@ -146,25 +146,25 @@ public class EditorCameraController : MonoBehaviour
     private bool    _hasAnchor;
     private Vector3 _anchorWorld;
 
-    // Inertia — velocity is sampled from a ~130 ms ring-buffer window so
-    // release momentum reflects the user's last few frames of motion, not
-    // a single noisy frame. Damping is per-60fps-frame, scaled to be
-    // framerate-independent. Tuning: 0.92 pan ≈ Apple Maps "throw" curve
-    // (~1.3 s to ~1% velocity); zoom 0.88 settles faster; yaw/pitch 0.90
-    // splits the difference. Snap-to-rest floors kill the asymptotic tail
-    // so the camera comes to a hard stop instead of drifting forever.
+    // Inertia — velocity is sampled from a ~100 ms ring-buffer window so
+    // release momentum reflects the very last instant of the gesture, not
+    // an average over a long tail. Damping is per-60fps-frame, scaled to be
+    // framerate-independent. Snap-to-rest floors kill the asymptotic tail
+    // so the camera comes to a clean stop instead of drifting forever.
+    // Pan/yaw carry generous momentum (feels satisfying to throw); zoom/pitch
+    // settle quickly (feels precise and controllable).
     private Vector3 _panVelocity;   // world units / sec
     private float   _zoomVelocity;  // distance units / sec
     private float   _yawVelocity;   // degrees / sec
     private float   _pitchVelocity; // degrees / sec
-    private const float PanDamping     = 0.92f;
-    private const float ZoomDamping    = 0.88f;
-    private const float YawDamping     = 0.90f;
-    private const float PitchDamping   = 0.90f;
-    private const float PanSnapFloor   = 0.05f;  // u / s
-    private const float ZoomSnapFloor  = 0.10f;  // dist / s
-    private const float YawSnapFloor   = 2f;     // deg / s
-    private const float PitchSnapFloor = 2f;     // deg / s
+    private const float PanDamping     = 0.93f;  // was 0.92 — slightly more throw
+    private const float ZoomDamping    = 0.84f;  // was 0.88 — crisper zoom settle
+    private const float YawDamping     = 0.92f;  // was 0.90 — satisfying twist glide
+    private const float PitchDamping   = 0.86f;  // was 0.90 — pitch snaps back fast
+    private const float PanSnapFloor   = 0.10f;  // u / s    was 0.05 — cleaner stop
+    private const float ZoomSnapFloor  = 0.20f;  // dist / s  was 0.10
+    private const float YawSnapFloor   = 3.0f;   // deg / s   was 2
+    private const float PitchSnapFloor = 2.5f;   // deg / s   was 2
 
     // Velocity ring buffer — pre-allocated, indexed modulo VelSampleCount.
     // Pushed each frame the gesture is active; release velocity is read as
@@ -173,7 +173,7 @@ public class EditorCameraController : MonoBehaviour
     // or distance produces an inertia matched to the world glide felt.
     private struct VelSample { public float time; public Vector3 pivot; public float dist; public float yaw; public float pitch; }
     private const int   VelSampleCount  = 8;
-    private const float VelSampleWindow = 0.13f;
+    private const float VelSampleWindow = 0.10f;  // was 0.13 — tighter window, cleaner release
     private readonly VelSample[] _velSamples = new VelSample[VelSampleCount];
     private int _velSampleHead, _velSampleFill;
 
@@ -220,8 +220,11 @@ public class EditorCameraController : MonoBehaviour
     // minCutoff sets the smoothing floor when nearly still (lower = smoother,
     // laggier); beta raises the cutoff with pointer speed so fast motion stays
     // responsive. Tuned for screen pixels at ~60 fps.
-    private const float PointerMinCutoff = 1.8f;
-    private const float PointerBeta      = 0.07f;
+    // 1.0 minCutoff (was 1.8) — aggressively damps sensor jitter at slow speeds
+    // so a still-held finger doesn't shimmer. 0.10 beta (was 0.07) — cutoff climbs
+    // faster with speed so a deliberate swipe still feels glued to the finger.
+    private const float PointerMinCutoff = 1.0f;
+    private const float PointerBeta      = 0.10f;
     private const float PointerDCutoff   = 1.0f;
 
     // Rubber-band bounds. Pitch and distance are soft-clamped with a small
@@ -235,10 +238,10 @@ public class EditorCameraController : MonoBehaviour
     private float  _nextBoundsRecompute;
     private const float BoundsRecomputeInterval = 2f;
     private const float DefaultBoundsHalfSize   = 100f;
-    private const float PitchOvershootDeg       = 5f;
-    private const float DistOvershoot           = 8f;
-    private const float BoundsOvershoot         = 30f;
-    private const float SpringSettleTime        = 0.35f; // seconds to reach ~1% of overshoot
+    private const float PitchOvershootDeg       = 7f;   // was 5 — more springy pitch limit
+    private const float DistOvershoot           = 10f;  // was 8  — more springy zoom limit
+    private const float BoundsOvershoot         = 25f;  // was 30 — tighter pan boundary
+    private const float SpringSettleTime        = 0.22f; // was 0.35 — snappier spring-back
 
     // Tap (for select mode)
     private bool    _tapDown;
@@ -284,6 +287,18 @@ public class EditorCameraController : MonoBehaviour
     // from Globals so the drop-zone tracks the device's home-indicator
     // inset instead of hard-coding a portrait-phone number.
     private const float TrashIconHalfHeight  = 36f;
+
+    // Scale caps for the selection-overlay scale handle.
+    // Past the hard limit, ScaleSelected applies the delta at reduced strength
+    // (soft overshoot band) so the user feels resistance rather than a wall.
+    // ApplyScaleSpring then pulls the scale back inside [ScaleMin, ScaleMax]
+    // once the user lifts their finger (no ScaleSelected call for 120 ms).
+    private const float ScaleMin              = 0.08f;
+    private const float ScaleMax              = 12f;
+    private const float ScaleOvershoot        = 0.12f; // 12 % past hard limit allowed
+    private const float ScaleSpringDelay      = 0.12f; // seconds after last call before spring fires
+    private const float ScaleSpringSettleTime = 0.18f; // seconds to settle to ~1 % of overshoot
+    private float _lastScaleTime              = -1f;
 
     private void Awake()
     {
@@ -779,6 +794,7 @@ public class EditorCameraController : MonoBehaviour
         ApplyFraming();
 
         if (SelectActive) ProcessSelectTap();
+        ApplyScaleSpring();
         ApplyCamera();
         PublishSelectionBounds();
         TrackCameraPersist();
@@ -935,12 +951,16 @@ public class EditorCameraController : MonoBehaviour
         float angNow = Mathf.Atan2(pB.y - pA.y, pB.x - pA.x) * Mathf.Rad2Deg;
 
         // ── Per-axis engagement (cumulative since session start) ────────────
-        if (!_pinchEngaged && Mathf.Abs(dNow - _startD) >= PinchDeadZonePx)
+        // Tilt is exclusive: once it engages, pinch and twist cannot engage
+        // in the same session (and vice-versa — tilt already requires !_pinchEngaged
+        // and !_twistEngaged). This makes the two-finger up/down swipe a pure-tilt
+        // gesture with no accidental zoom, rotate, or pan side-effects.
+        if (!_pinchEngaged && !_tiltEngaged && Mathf.Abs(dNow - _startD) >= PinchDeadZonePx)
         {
             _pinchEngaged = true;
             _pinchDist    = dNow; // re-baseline so first applied delta is zero
         }
-        if (!_twistEngaged && Mathf.Abs(Mathf.DeltaAngle(_startAng, angNow)) >= TwistDeadZoneDeg)
+        if (!_twistEngaged && !_tiltEngaged && Mathf.Abs(Mathf.DeltaAngle(_startAng, angNow)) >= TwistDeadZoneDeg)
         {
             _twistEngaged = true;
             _pinchAngle   = angNow;
@@ -977,13 +997,15 @@ public class EditorCameraController : MonoBehaviour
             }
         }
 
-        // ── Apply each engaged axis (independent, parallel) ─────────────────
-        if (_pinchEngaged)
+        // ── Apply each engaged axis ─────────────────────────────────────────
+        // Tilt is exclusive: when it is engaged, zoom and rotate are suppressed
+        // so the two-finger up/down swipe only changes pitch.
+        if (_pinchEngaged && !_tiltEngaged)
         {
-            Zoom(-(dNow - _pinchDist) * 0.04f); // Zoom uses SoftClamp internally
+            Zoom(-(dNow - _pinchDist) * 0.055f); // was 0.04 — more punch per mm of spread
             _pinchDist = dNow;
         }
-        if (_twistEngaged)
+        if (_twistEngaged && !_tiltEngaged)
         {
             // Sign: atan2 is CCW-positive. A CW finger twist produces
             // dYaw < 0; we want the camera to orbit CCW around the pivot
@@ -1005,14 +1027,12 @@ public class EditorCameraController : MonoBehaviour
         }
 
         // ── Anchor compensation — pan emerges from this ─────────────────────
-        // Each frame, snap pivot so _anchorWorld lands back under the
-        // current midpoint. When tilt is engaged, suppress the Y component
-        // of midpoint pan: vertical motion is tilt input, not pan input.
-        if (_hasAnchor)
+        // Skipped entirely when tilt is engaged: vertical finger motion is
+        // pitch input, and we don't want horizontal drift to pan the world
+        // either. The pivot stays locked in place for the duration of a tilt.
+        if (_hasAnchor && !_tiltEngaged)
         {
-            Vector2 effMid = midNow;
-            if (_tiltEngaged) effMid.y = _startMid.y;
-            _pivot = SoftClampPivot(SolvePivotForAnchor(_anchorWorld, effMid));
+            _pivot = SoftClampPivot(SolvePivotForAnchor(_anchorWorld, midNow));
         }
 
         // Capture windowed velocity for inertia. Sampled from _pivot motion
@@ -1121,12 +1141,12 @@ public class EditorCameraController : MonoBehaviour
             // point stays under the cursor.
             if (TryPlaneAnchor(Input.mousePosition, out var scrollAnchor))
             {
-                Zoom(-scroll * 1.8f);
+                Zoom(-scroll * 2.5f); // was 1.8 — snappier scroll zoom
                 _pivot = SoftClampPivot(SolvePivotForAnchor(scrollAnchor, Input.mousePosition));
             }
             else
             {
-                Zoom(-scroll * 1.8f);
+                Zoom(-scroll * 2.5f);
             }
             PushVelSample();
             ComputeWindowedVelocity();
@@ -1954,9 +1974,47 @@ public class EditorCameraController : MonoBehaviour
     public void ScaleSelected(float factor)
     {
         if (_selGo == null || factor <= 0f) return;
-        _selGo.transform.localScale *= factor;
+        _lastScaleTime = Time.time;
+
+        var ls = _selGo.transform.localScale;
+        var ns = ls * factor;
+
+        // Soft cap: past the hard limit the delta is compressed to the overshoot
+        // band asymptotically — the user feels growing resistance, not a wall.
+        float softMin = ScaleMin * (1f - ScaleOvershoot);
+        float softMax = ScaleMax * (1f + ScaleOvershoot);
+        float cur = ls.x; float nv = ns.x;
+        if (nv < softMin) nv = softMin;
+        if (nv > softMax) nv = softMax;
+        float ratio = (cur > 1e-6f) ? nv / cur : 1f;
+        _selGo.transform.localScale = ls * ratio;
+
         ClampSelectionAboveTerrain();
         MarkStateDirty();
+    }
+
+    // Pulls the selected object's scale back inside [ScaleMin, ScaleMax] with a
+    // critically-damped spring once the user has stopped scaling (no ScaleSelected
+    // call for ScaleSpringDelay seconds). The brief spring-back is the tactile
+    // signal that a limit was reached — the object stretches then snaps back.
+    private void ApplyScaleSpring()
+    {
+        if (_selGo == null) return;
+        if (Time.time - _lastScaleTime < ScaleSpringDelay) return;
+        if (Time.deltaTime <= 0f) return;
+
+        var ls = _selGo.transform.localScale;
+        bool anyOut = ls.x < ScaleMin || ls.x > ScaleMax ||
+                      ls.y < ScaleMin || ls.y > ScaleMax ||
+                      ls.z < ScaleMin || ls.z > ScaleMax;
+        if (!anyOut) return;
+
+        float keep = Mathf.Pow(0.01f, Time.deltaTime / ScaleSpringSettleTime);
+        float nx = Mathf.Lerp(Mathf.Clamp(ls.x, ScaleMin, ScaleMax), ls.x, keep);
+        float ny = Mathf.Lerp(Mathf.Clamp(ls.y, ScaleMin, ScaleMax), ls.y, keep);
+        float nz = Mathf.Lerp(Mathf.Clamp(ls.z, ScaleMin, ScaleMax), ls.z, keep);
+        _selGo.transform.localScale = new Vector3(nx, ny, nz);
+        ClampSelectionAboveTerrain();
     }
 
     // Vertical-move variant for the selection-overlay's right-edge handle. React
@@ -1969,6 +2027,22 @@ public class EditorCameraController : MonoBehaviour
         _selGo.transform.position += new Vector3(0f, deltaY, 0f);
         ClampSelectionAboveTerrain();
         MarkStateDirty();
+    }
+
+    // Enter object-move state immediately after a programmatic SelectGameObject.
+    // Used by the drag-from-strip flow: the asset is spawned and selected, then
+    // this is called so the same finger gesture that dragged from the strip
+    // continues moving the asset without a lift-and-retap. touchId = -1 for
+    // mouse/pointer, >= 0 for touch finger.
+    public void BeginMoveSelected(int touchId)
+    {
+        if (_selGo == null) return;
+        _movingSel     = true;
+        _movingTouchId = touchId;
+        _movingMouse   = touchId < 0;
+        _tapDown       = false;
+        CaptureMoveAnchorHeight();
+        Notify("_editorDraggingObject", "true");
     }
 
     // Lift the selection so its lowest renderer point never sits below the

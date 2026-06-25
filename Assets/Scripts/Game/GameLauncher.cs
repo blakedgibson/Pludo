@@ -46,6 +46,7 @@ public class GameLauncher : MonoBehaviour
     private Volume _escapeBlurVolume;
     private bool   _hadPostProcessing;
 
+
     // ── Play-return editor state stash ────────────────────────────────────────
     // PlayFromEditorAsync captures the live editor state before entering play
     // and stores it here. When the editor re-opens after play (editMode:true),
@@ -203,8 +204,8 @@ end)
         // intersect the ray with the y = 0 plane so something still spawns
         // (games without explicit terrain still work). The asset tile remains in
         // the strip — that's owned by React state and we never touch it.
-        renderer.Globals["editorPlaceAsset"] = new Action<object, object, object, object, object>(
-            (cacheKey, modelUrl, screenPxX, screenPxY, isHumanoid) =>
+        renderer.Globals["editorPlaceAsset"] = new Action<object, object, object, object, object, object>(
+            (cacheKey, modelUrl, screenPxX, screenPxY, isHumanoid, sizeHint) =>
         {
             float px = Convert.ToSingle(screenPxX);
             float py = Convert.ToSingle(screenPxY);
@@ -219,7 +220,8 @@ end)
                 Convert.ToString(cacheKey),
                 Convert.ToString(modelUrl),
                 Convert.ToBoolean(isHumanoid),
-                new Vector2(px, py));
+                new Vector2(px, py),
+                Convert.ToSingle(sizeHint));
         });
         // Tap-to-add: React calls this when the user TAPS a strip tile (a press
         // with no meaningful drag) instead of dragging it. The model drops at
@@ -227,14 +229,15 @@ end)
         // a quick tap is a fast way to add a model without aiming at a spot.
         // Same terrain-snap + autosave as the drag-to-place path. No trash check
         // because a tap can't land on the (drag-only) trash drop-zone.
-        renderer.Globals["editorAddAssetCenter"] = new Action<object, object, object>(
-            (cacheKey, modelUrl, isHumanoid) =>
+        renderer.Globals["editorAddAssetCenter"] = new Action<object, object, object, object>(
+            (cacheKey, modelUrl, isHumanoid, sizeHint) =>
         {
             PlaceAssetAtScreenPoint(
                 Convert.ToString(cacheKey),
                 Convert.ToString(modelUrl),
                 Convert.ToBoolean(isHumanoid),
-                new Vector2(Screen.width * 0.5f, Screen.height * 0.5f));
+                new Vector2(Screen.width * 0.5f, Screen.height * 0.5f),
+                Convert.ToSingle(sizeHint));
         });
         // Raw pointer helpers for the editor. The asset-strip drag-to-place flow
         // reads these to (a) place the model under the finger at release and
@@ -247,6 +250,23 @@ end)
         renderer.Globals["getPointerX"]   = new Func<float>(() => EditorPointerPos().x);
         renderer.Globals["getPointerY"]   = new Func<float>(() => EditorPointerPos().y);
         renderer.Globals["isPointerDown"] = new Func<string>(() => EditorPointerDown() ? "true" : "false");
+        // Drag-to-place: called when the user drags a strip tile past the tap-slop
+        // threshold. Spawns the actual asset at the current screen position and
+        // immediately enters the move-selected state so the finger that is still
+        // down continues moving the asset in world space (same as dragging a
+        // placed object). React no longer calls editorPlaceAsset for this gesture.
+        renderer.Globals["editorBeginAssetDrag"] = new Action<object, object, object, object, object, object>(
+            (cacheKey, modelUrl, isHumanoid, sizeHint, sx, sy) =>
+        {
+            var runner = LuauGameRunner.Instance;
+            if (runner == null) return;
+            var world = RaycastToWorldPoint(Convert.ToSingle(sx), Convert.ToSingle(sy));
+            if (!world.HasValue) return;
+            int touchId = Input.touchCount > 0 ? Input.GetTouch(0).fingerId : -1;
+            runner.PlaceEditorAssetForDrag(
+                Convert.ToString(cacheKey), Convert.ToString(modelUrl),
+                Convert.ToBoolean(isHumanoid), world.Value, touchId, Convert.ToSingle(sizeHint));
+        });
         // Safe-area conversion: pixels → React canvas reference units. On a real
         // device Screen.safeArea + Screen.width/height share a coordinate space
         // and the conversion is straightforward. In the Unity Editor the two
@@ -1054,7 +1074,7 @@ end)
     // finger) and editorAddAssetCenter (tap, screen point = viewport centre).
     // Raycasts the screen point into the scene, snaps to the terrain column,
     // spawns the asset, and bumps the editor-state dirty rev for autosave.
-    private void PlaceAssetAtScreenPoint(string cacheKey, string modelUrl, bool isHumanoid, Vector2 screenPx)
+    private void PlaceAssetAtScreenPoint(string cacheKey, string modelUrl, bool isHumanoid, Vector2 screenPx, float sizeHint = 0f)
     {
         var runner = LuauGameRunner.Instance;
         if (runner == null || runner.GameRoot == null)
@@ -1062,35 +1082,42 @@ end)
             Debug.LogWarning("[PlaceAsset] No active runner — ignored.");
             return;
         }
-        var cam = Camera.main;
-        if (cam == null)
+        var world = RaycastToWorldPoint(screenPx.x, screenPx.y);
+        if (!world.HasValue)
         {
-            Debug.LogWarning("[PlaceAsset] No main camera — ignored.");
+            Debug.LogWarning("[PlaceAsset] No camera or intersect plane — ignored.");
             return;
         }
+        runner.PlaceEditorAsset(cacheKey, modelUrl, isHumanoid, world.Value, sizeHint);
+        EditorCameraController.MarkStateDirty();
+    }
 
-        var ray = cam.ScreenPointToRay(new Vector3(screenPx.x, screenPx.y, 0));
+    // Casts a ray from screen position (sx, sy) into the scene and returns the
+    // terrain-snapped world point. Returns null when Camera.main is absent or
+    // the ray misses every surface and the y=0 plane.
+    private static Vector3? RaycastToWorldPoint(float sx, float sy)
+    {
+        var cam = Camera.main;
+        if (cam == null) return null;
 
-        // Find the (x, z) the user is pointing at — any collider hit, or the
-        // y=0 plane as fallback. We don't trust hit.point.y because it might be
-        // the top of a prop, not the terrain surface.
+        var ray = cam.ScreenPointToRay(new Vector3(sx, sy, 0));
+
+        // Horizontal anchor: first collider hit, or y=0 plane as fallback.
         Vector3 anchor;
         if (Physics.Raycast(ray, out var hit, 500f))
-        {
             anchor = hit.point;
-        }
         else
         {
             var ground = new Plane(Vector3.up, Vector3.zero);
-            if (!ground.Raycast(ray, out float enter)) return;
+            if (!ground.Raycast(ray, out float enter)) return null;
             anchor = ray.GetPoint(enter);
         }
 
-        // Snap to terrain: shoot a vertical raycast at (anchor.x, anchor.z) and
-        // keep the topmost MeshyAssetMarker.IsTerrain hit. Falls back to y=0 if
-        // no terrain exists in this column.
-        var down = new Vector3(anchor.x, 500f, anchor.z);
-        var hits = Physics.RaycastAll(down, Vector3.down, 1000f, ~0, QueryTriggerInteraction.Ignore);
+        // Vertical snap: shoot downward from (anchor.x, 500, anchor.z) and keep
+        // the highest MeshyAssetMarker.IsTerrain hit. Falls back to y=0 when no
+        // terrain exists (e.g. a bare baseplate game).
+        var downOrigin = new Vector3(anchor.x, 500f, anchor.z);
+        var hits = Physics.RaycastAll(downOrigin, Vector3.down, 1000f, ~0, QueryTriggerInteraction.Ignore);
         float terrainY = float.MinValue;
         foreach (var h in hits)
         {
@@ -1099,12 +1126,7 @@ end)
             if (mk == null || !mk.IsTerrain) continue;
             if (h.point.y > terrainY) terrainY = h.point.y;
         }
-        Vector3 world = new Vector3(anchor.x, terrainY > float.MinValue ? terrainY : 0f, anchor.z);
-
-        runner.PlaceEditorAsset(cacheKey, modelUrl, isHumanoid, world);
-        // Editor-state autosave: the placement is a user-visible edit that
-        // should survive a reload, so bump the dirty rev for React's poller.
-        EditorCameraController.MarkStateDirty();
+        return new Vector3(anchor.x, terrainY > float.MinValue ? terrainY : 0f, anchor.z);
     }
 
     private LuauGameRunner EnsureLuauRunner()
