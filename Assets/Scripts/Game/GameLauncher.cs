@@ -281,6 +281,9 @@ end)
         renderer.Globals["getSafeAreaBottom"] = new Func<float>(SafeAreaBottomRef);
         renderer.Globals["getSafeAreaLeft"]   = new Func<float>(SafeAreaLeftRef);
         renderer.Globals["getSafeAreaRight"]  = new Func<float>(SafeAreaRightRef);
+        // Tablet/phone idiom — drives React's responsive.ts (multi-column grids,
+        // centered max-width content, side-rail nav). See DeviceIdiom.cs.
+        renderer.Globals["getIsTablet"] = new Func<bool>(() => DeviceIdiom.IsTablet);
         // System color scheme — React reads this from theme.ts at module load
         // so the app background matches the device theme (black in dark mode,
         // white in light mode). Unity does NOT expose a cross-platform dark-mode

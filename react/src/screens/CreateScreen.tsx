@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { C } from '../theme';
 import { safeAreaTop, safeAreaBottom, safeAreaLeft, safeAreaRight } from '../safeArea';
+import { isTablet } from '../responsive';
 import { AssetItem } from '../types';
 import { Pressable } from '../components/Pressable';
 import { SkeletonGameCard } from '../components/Skeleton';
@@ -52,9 +53,19 @@ const SNAP_TO_HALF    = SHEET_COLLAPSED + (SHEET_HALF - SHEET_COLLAPSED) * 0.40;
 
 // Editor runs in landscape; centered popups/sheets cap at these widths so they
 // don't stretch edge-to-edge across the wide viewport.
-const EDITOR_MODAL_MAX_WIDTH  = 420;
-const EDITOR_SHEET_MAX_WIDTH  = 520;
-const EDITOR_BANNER_MAX_WIDTH = 480;
+// On tablet the landscape canvas is width-pinned exactly at the phone
+// reference (see MobileOrientationManager.ApplyCanvasReference) but gains
+// bonus height — panels/modals get a modest width bump and lean on that
+// extra vertical room rather than crowding the 3D viewport.
+const EDITOR_TABLET             = isTablet();
+const EDITOR_MODAL_MAX_WIDTH    = EDITOR_TABLET ? 520 : 420;
+const EDITOR_SHEET_MAX_WIDTH    = EDITOR_TABLET ? 620 : 520;
+const EDITOR_BANNER_MAX_WIDTH   = EDITOR_TABLET ? 560 : 480;
+const EDITOR_SIDE_PANEL_WIDTH   = EDITOR_TABLET ? 360 : 280; // ObjectSettingsPanel
+const EDITOR_LOGIC_PANEL_WIDTH  = EDITOR_TABLET ? 420 : 320; // CustomLogicPanel
+const EDITOR_INTERFACE_WIDTH    = EDITOR_TABLET ? 400 : 320; // HUD-button modal
+const EDITOR_INTERFACE_MAXH     = EDITOR_TABLET ? 720 : 580;
+const EDITOR_ASSET_TILE_SIZE    = EDITOR_TABLET ?  72 :  56; // bottom asset/model strip
 
 function editorPointerY(): number {
   return (Globals['getPointerY'] as any)?.() ?? 0;
@@ -531,7 +542,7 @@ function ObjectSettingsPanel({ settings, objectName, size, onChange, onClose, on
       left: safeAreaLeft() + 6,
       top: safeAreaTop() + 56,
       bottom: safeAreaBottom() + 12,
-      ...(size === 'full' ? { right: safeAreaRight() + 6 } : { width: 280 }),
+      ...(size === 'full' ? { right: safeAreaRight() + 6 } : { width: EDITOR_SIDE_PANEL_WIDTH }),
       backgroundColor: 'rgba(20,20,22,0.94)',
       borderRadius: 14,
       borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)',
@@ -919,7 +930,7 @@ function CustomLogicPanel({ graph, objectName, size, onChange, onClose, onPointe
         left: safeAreaLeft() + 6,
         top: safeAreaTop() + 56,
         bottom: safeAreaBottom() + 12,
-        ...(size === 'full' ? { right: safeAreaRight() + 6 } : { width: 320 }),
+        ...(size === 'full' ? { right: safeAreaRight() + 6 } : { width: EDITOR_LOGIC_PANEL_WIDTH }),
         backgroundColor: 'rgba(20,20,22,0.94)',
         borderRadius: 14,
         borderWidth: 1, borderColor: 'rgba(255,255,255,0.10)',
@@ -1418,6 +1429,7 @@ function EditorScreen({ game, onBack, onEditingChange, onOpenShop, editorAssets,
 
   function commitHudBtn() {
     if (!btnDraft.label.trim()) return;
+    if (btnDraft.action === 'event' && !btnDraft.eventName.trim()) return;
     let next: HudButton[];
     if (ifaceEditing === 'new') {
       next = [...hudButtons, { ...btnDraft, id: `btn_${Date.now()}` }];
@@ -3243,12 +3255,14 @@ function EditorScreen({ game, onBack, onEditingChange, onOpenShop, editorAssets,
           }}
         >
         <view style={{
-          width: 320,
+          width: EDITOR_INTERFACE_WIDTH,
+          maxHeight: EDITOR_INTERFACE_MAXH,
           backgroundColor: 'rgba(16,16,20,0.98)',
           borderRadius: 18,
           borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)',
+          flexDirection: 'column',
         }}>
-          {/* Modal header */}
+          {/* Modal header — always visible, never scrolls */}
           <view style={{
             flexDirection: 'row', alignItems: 'center',
             paddingLeft: 14, paddingRight: 10, paddingTop: 13, paddingBottom: 13,
@@ -3273,6 +3287,9 @@ function EditorScreen({ game, onBack, onEditingChange, onOpenShop, editorAssets,
               </view>
             )}
           </view>
+          {/* Scrollable body — flex:1 + height:1 is the ReactUnity seed needed
+              for Yoga to measure children and enable drag scrolling. */}
+          <scroll style={{ flex: 1, height: 1 }}>
           {ifaceEditing !== null ? (
             /* ── Add / Edit form ── */
             <view style={{ padding: 14, flexDirection: 'column', gap: 10 }}>
@@ -3380,7 +3397,7 @@ function EditorScreen({ game, onBack, onEditingChange, onOpenShop, editorAssets,
                 <button onClick={() => setIfaceEditing(null)} style={{ flex: 1, paddingTop: 9, paddingBottom: 9, borderRadius: 9, alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.07)', borderWidth: 0 }}>
                   <text style={{ fontSize: 12, color: C.secondary, fontWeight: 'bold' }}>Cancel</text>
                 </button>
-                <button onClick={commitHudBtn} style={{ flex: 1, paddingTop: 9, paddingBottom: 9, borderRadius: 9, alignItems: 'center', backgroundColor: btnDraft.label.trim() ? C.blue : 'rgba(30,140,255,0.25)', borderWidth: 0 }}>
+                <button onClick={commitHudBtn} style={{ flex: 1, paddingTop: 9, paddingBottom: 9, borderRadius: 9, alignItems: 'center', backgroundColor: (btnDraft.label.trim() && (btnDraft.action !== 'event' || btnDraft.eventName.trim())) ? C.blue : 'rgba(30,140,255,0.25)', borderWidth: 0 }}>
                   <text style={{ fontSize: 12, color: '#fff', fontWeight: 'bold' }}>{ifaceEditing === 'new' ? 'Add Button' : 'Save'}</text>
                 </button>
               </view>
@@ -3429,6 +3446,7 @@ function EditorScreen({ game, onBack, onEditingChange, onOpenShop, editorAssets,
               </view>
             </view>
           )}
+          </scroll>
         </view>
         </view>
       ) : null}
@@ -3575,7 +3593,7 @@ function EditorScreen({ game, onBack, onEditingChange, onOpenShop, editorAssets,
                     try { (Globals as any).setEditorSheetDragging?.('true'); } catch {}
                   }}
                   style={{
-                    width: 56, height: 56,
+                    width: EDITOR_ASSET_TILE_SIZE, height: EDITOR_ASSET_TILE_SIZE,
                     backgroundColor: '#1a1a1a',
                     alignItems: 'center', justifyContent: 'center',
                     overflow: 'hidden',
