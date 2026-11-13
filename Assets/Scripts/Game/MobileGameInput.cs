@@ -17,6 +17,8 @@ public class MobileGameInput : MonoBehaviour
 
     public static Vector2 MoveInput   { get; private set; }
     public static bool    JumpPressed  { get; private set; }
+    /// <summary>Jump button is being held (Roblox: hold to keep hopping).</summary>
+    public static bool    JumpHeld     => HostDriven && _hostJumpHeld;
 
     // Latch for a "reset to spawn" affordance. Desktop uses the R key directly;
     // a mobile reset button can call RequestReset(). ConsumeReset() reads and
@@ -43,6 +45,8 @@ public class MobileGameInput : MonoBehaviour
     private bool           _hostActive;
     public static void SetHostMove(Vector2 v) => _hostMove = Vector2.ClampMagnitude(v, 1f);
     public static void HostJump() => _hostJump = true;
+    private static bool _hostJumpHeld;
+    public static void SetHostJumpHeld(bool held) => _hostJumpHeld = held;
     /// <summary>True while gameplay input is live (between game start and pause/exit).</summary>
     public bool ControlsActive => HostDriven ? _hostActive : _canvas.gameObject.activeSelf;
 
@@ -228,6 +232,7 @@ public class MobileGameInput : MonoBehaviour
             MoveInput   = _hostActive ? _hostMove : Vector2.zero;
             JumpPressed = _hostActive && _hostJump;
             _hostJump   = false;
+            if (!_hostActive) _hostJumpHeld = false;
             return;
         }
         if (!_canvas.gameObject.activeSelf) { MoveInput = Vector2.zero; JumpPressed = false; return; }

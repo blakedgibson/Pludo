@@ -30,17 +30,6 @@ export default function RootLayout() {
                   contentStyle: { backgroundColor: 'transparent' },
                 }}
               />
-              {/* "Create 3D Model": same Liquid Glass sheet treatment. */}
-              <Stack.Screen
-                name="forge"
-                options={{
-                  presentation: 'formSheet',
-                  sheetAllowedDetents: [0.6, 1.0],
-                  sheetGrabberVisible: true,
-                  sheetCornerRadius: 32,
-                  contentStyle: { backgroundColor: 'transparent' },
-                }}
-              />
             </Stack>
           </UnityHost>
         </View>

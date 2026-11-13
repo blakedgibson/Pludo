@@ -5,11 +5,15 @@ import { fetchGames, fetchAvatarItems, searchUsers } from '../api';
 import { GameCard } from '../components/GameCard';
 import { SkeletonGameCard } from '../components/Skeleton';
 import { RefreshButton } from '../components/RefreshButton';
-import { safeAreaTop, safeAreaBottom } from '../safeArea';
-import { BOTTOM_NAV_HEIGHT } from '../components/BottomNav';
-import { isTablet } from '../responsive';
+import { safeAreaTop } from '../safeArea';
+import { bottomNavInset } from '../components/BottomNav';
+import { GlassButton } from '../components/GlassButton';
 
-function SectionHeader({ title, count }: { title: string; count?: number }) {
+// `trailing` renders a right-aligned control (eg. the refresh button) inside
+// the header row rather than in a wrapper around it — a wrapper would stack
+// its own margin on top of this one and knock the control out of vertical
+// alignment with the title.
+function SectionHeader({ title, count, trailing }: { title: string; count?: number; trailing?: React.ReactNode }) {
   return (
     <view style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 }}>
       <text style={{ fontSize: 18, color: C.text, fontWeight: 'bold' }}>{title}</text>
@@ -17,6 +21,12 @@ function SectionHeader({ title, count }: { title: string; count?: number }) {
         <view style={{ backgroundColor: C.surface, borderRadius: 10, paddingLeft: 8, paddingRight: 8, paddingTop: 2, paddingBottom: 2 }}>
           <text style={{ fontSize: 12, color: C.secondary, fontWeight: 'bold' }}>{count}</text>
         </view>
+      ) : null}
+      {trailing ? (
+        <>
+          <view style={{ flex: 1 }} />
+          {trailing}
+        </>
       ) : null}
     </view>
   );
@@ -175,10 +185,10 @@ export function ExploreScreen({ onPreview }: { onPreview: (game: GameData) => vo
           flexDirection: 'row', alignItems: 'center',
           paddingLeft: 14, paddingRight: 14,
           paddingTop: 11, paddingBottom: 11,
-          borderWidth: 1, borderColor: query ? C.green : C.border,
+          borderWidth: 1, borderColor: query ? C.primary : C.border,
           gap: 10,
         }}>
-          <icon set="material-rounded" style={{ fontSize: 20, color: searching ? C.green : C.secondary, lineHeight: 20 }}>search</icon>
+          <icon set="material-rounded" style={{ fontSize: 20, color: searching ? C.primary : C.secondary, lineHeight: 20 }}>search</icon>
           <input
             value={query}
             onChange={(val: any) => setQuery(val)}
@@ -189,9 +199,9 @@ export function ExploreScreen({ onPreview }: { onPreview: (game: GameData) => vo
             }}
           />
           {query.length > 0 ? (
-            <button onClick={() => setQuery('')} style={{ backgroundColor: C.surface, borderRadius: 10, borderWidth: 0, paddingLeft: 8, paddingRight: 8, paddingTop: 4, paddingBottom: 4 }}>
+            <GlassButton onClick={() => setQuery('')} style={{ backgroundColor: C.surface, borderRadius: 10, borderWidth: 0, paddingLeft: 8, paddingRight: 8, paddingTop: 4, paddingBottom: 4 }}>
               <icon set="material-rounded" style={{ fontSize: 14, color: C.secondary, lineHeight: 14 }}>close</icon>
-            </button>
+            </GlassButton>
           ) : null}
         </view>
       </view>
@@ -249,10 +259,10 @@ export function ExploreScreen({ onPreview }: { onPreview: (game: GameData) => vo
           ) : (
             /* ── Default browse view ── */
             <view style={{ paddingBottom: 24 }}>
-              <view style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <SectionHeader title="Popular Games" />
-                <RefreshButton onRefresh={() => refreshRef.current()} />
-              </view>
+              <SectionHeader
+                title="Popular Games"
+                trailing={<RefreshButton onRefresh={() => refreshRef.current()} />}
+              />
               {!loaded ? (
                 <view style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between' }}>
                   {[0, 1, 2, 3, 4, 5].map(i => <SkeletonGameCard key={i} />)}
@@ -277,7 +287,7 @@ export function ExploreScreen({ onPreview }: { onPreview: (game: GameData) => vo
               footprint on devices with a home-indicator bezel. On tablet the
               nav is a left rail instead — the bottom edge is clear, so this
               only needs the safe-area inset, not the nav's own height. */}
-          <view style={{ height: (isTablet() ? 0 : BOTTOM_NAV_HEIGHT) + safeAreaBottom() + 16 }} />
+          <view style={{ height: bottomNavInset() + 16 }} />
 
         </scroll>
       )}

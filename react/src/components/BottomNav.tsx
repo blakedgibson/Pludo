@@ -3,19 +3,32 @@ import { C } from '../theme';
 import { isTablet } from '../responsive';
 import { Pressable } from './Pressable';
 import { safeAreaBottom, safeAreaLeft } from '../safeArea';
+import { glass, GLASS } from '../glass';
 
 interface Props {
   active: number;
   onTab: (i: number) => void;
 }
 
-// Visible height of the nav CONTENT (icons + labels + internal padding) — excludes
-// the dynamic safe-area bottom inset that the nav also pads for. Overlays that
-// need to sit above the nav (eg. the Play bar) should offset by
-// BOTTOM_NAV_HEIGHT + safeAreaBottom().
-export const BOTTOM_NAV_HEIGHT = 60;
+// ── Liquid Glass tab bar ────────────────────────────────────────────────────
+// iOS 26-style: the bar is a floating glass capsule detached from the screen
+// edges, and the selection is a smaller glass "lens" that slides between tabs
+// (see glass.ts and github.com/shayann07/liquidglass docs/tab-bar.md). On
+// tablet the same capsule stands vertically as a floating left rail.
 
-// Width of the tablet side-rail variant (icons + labels + internal padding),
+// Height of the glass capsule itself.
+const BAR_HEIGHT = 62;
+// Gap between the capsule and the screen's bottom edge when there is no
+// home-indicator inset. With an inset the bar sinks into it a little, as iOS's does.
+const BAR_MIN_GAP = 10;
+const BAR_SINK    = 12;
+
+// Space the nav claims above the safe-area inset: capsule + gap + breathing
+// room so the last row of content clears it. Overlays that need to sit above
+// the nav (eg. the Play bar) should offset by BOTTOM_NAV_HEIGHT + safeAreaBottom().
+export const BOTTOM_NAV_HEIGHT = BAR_HEIGHT + BAR_MIN_GAP;
+
+// Width of the tablet side-rail variant (glass capsule + its margins),
 // analogous to BOTTOM_NAV_HEIGHT on phone.
 export const NAV_RAIL_WIDTH = 84;
 
@@ -24,16 +37,21 @@ export const NAV_RAIL_WIDTH = 84;
 // directly wherever code needs to avoid the nav generically.
 export const NAV_FOOTPRINT = isTablet() ? NAV_RAIL_WIDTH : BOTTOM_NAV_HEIGHT;
 
-// Selected color uses the brand primary so the active tab reads as accented
-// rather than "default white text." Light mode still inverts to a dark glyph
-// so the tab pops on a near-white nav bg.
-const IS_LIGHT = C.bg === '#FFFFFF';
-const SELECTED_COLOR   = IS_LIGHT ? '#000000' : C.primary;
-const UNSELECTED_COLOR = C.secondary;
-const NAV_BG           = IS_LIGHT ? 'rgba(242,242,247,0.96)' : 'rgba(28,28,30,0.96)';
-const NAV_BORDER       = IS_LIGHT ? 'rgba(0,0,0,0.08)'       : 'rgba(255,255,255,0.08)';
+// Vertical space a tab screen must leave at the bottom of its content so the
+// last row isn't swallowed by the floating nav. On tablet the nav is a left
+// rail, so only the home-indicator inset applies. Uncached because
+// safeAreaBottom() tracks orientation.
+export function bottomNavInset(): number {
+  return (isTablet() ? 0 : BOTTOM_NAV_HEIGHT) + safeAreaBottom();
+}
 
-const ICON_SIZE = 26;
+const IS_LIGHT = C.bg === '#FFFFFF';
+const SELECTED_COLOR   = IS_LIGHT ? '#0A64FF' : C.primary;
+const UNSELECTED_COLOR = IS_LIGHT ? '#3C3C43' : '#D1D1D6';
+
+const ICON_SIZE = 25;
+const LENS_INSET = 4;          // lens sits this far inside the bar
+const RAIL_TAB_HEIGHT = 64;    // tablet: fixed tab height inside the rail
 
 const TABS: { glyph: string; label: string }[] = [
   { glyph: 'home',         label: 'Home'    },
@@ -43,131 +61,137 @@ const TABS: { glyph: string; label: string }[] = [
   { glyph: 'person',       label: 'You'     },
 ];
 
-const TAB_WIDTH_PCT  = 100 / TABS.length;
-const PILL_WIDTH_PCT = 6;          // pill is ~6% of nav width
-const PILL_HEIGHT    = 3;
-const LERP_SPEED     = 0.32;       // higher = snappier; lower = smoother
+const TAB_PCT    = 100 / TABS.length;
+const LERP_SPEED = 0.28;       // higher = snappier; lower = smoother
 
-export function BottomNav({ active, onTab }: Props) {
-  // Pill x-center expressed as a percentage of nav width. Each tab's center
-  // sits at (i + 0.5) * 20% for 5 tabs.
-  const target     = (active + 0.5) * TAB_WIDTH_PCT;
-  const [pillX, setPillX] = useState(target);
-  const pillRef    = useRef(target);
-  const animRef    = useRef<any>(null);
+// The lens position as a fractional tab index, eased toward the active tab.
+function useLensPosition(active: number): number {
+  const [pos, setPos] = useState(active);
+  const posRef  = useRef(active);
+  const animRef = useRef<any>(null);
 
   useEffect(() => {
     if (animRef.current) clearInterval(animRef.current);
     animRef.current = setInterval(() => {
-      const cur  = pillRef.current;
-      const next = cur + (target - cur) * LERP_SPEED;
-      const done = Math.abs(target - next) < 0.05;
-      const val  = done ? target : next;
-      pillRef.current = val;
-      setPillX(val);
+      const cur  = posRef.current;
+      const next = cur + (active - cur) * LERP_SPEED;
+      const done = Math.abs(active - next) < 0.004;
+      const val  = done ? active : next;
+      posRef.current = val;
+      setPos(val);
       if (done) { clearInterval(animRef.current); animRef.current = null; }
     }, 16);
     return () => { if (animRef.current) clearInterval(animRef.current); };
-  }, [target]);
+  }, [active]);
 
+  return pos;
+}
+
+function TabItem({ i, active, onTab, style }: { i: number; active: number; onTab: (i: number) => void; style: any }) {
+  const { glyph, label } = TABS[i];
+  const isActive = i === active;
+  const color    = isActive ? SELECTED_COLOR : UNSELECTED_COLOR;
+  const set      = isActive ? 'material-rounded-filled' : 'material-rounded';
+  return (
+    <Pressable glass={false} onClick={() => onTab(i)} pressedScale={1.06} pressedOpacity={0.85} style={{
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      // Near-transparent fill keeps the whole tab a hit target.
+      backgroundColor: 'rgba(0,0,0,0.002)',
+      borderWidth: 0,
+      padding: 0,
+      gap: 2,
+      ...style,
+    }}>
+      <icon set={set} style={{ fontSize: ICON_SIZE, color, lineHeight: ICON_SIZE }}>{glyph}</icon>
+      {/* maxLines guards the frame where the label re-measures from
+          normal to bold on activation and briefly wraps. */}
+      <text style={{ fontSize: 10, color, textAlign: 'center', fontWeight: isActive ? 'bold' : 'normal', maxLines: 1 } as any}>{label}</text>
+    </Pressable>
+  );
+}
+
+export function BottomNav({ active, onTab }: Props) {
+  const pos = useLensPosition(active);
   const tablet = isTablet();
 
-  // Tablet: a left-docked vertical rail instead of a bottom row — a full-width
-  // 5-tab bar stretched across an iPad reads as sparse/oversized. Same tab
-  // data, sliding-pill mechanics, and colors; only the strip's axis flips.
+  // Tablet: a floating vertical glass rail on the left.
   if (tablet) {
     return (
       <view style={{
-        flexDirection: 'column',
-        flexShrink: 0,
         width: NAV_RAIL_WIDTH,
         height: '100%',
-        backgroundColor: NAV_BG,
-        borderRightWidth: 1,
-        borderRightColor: NAV_BORDER,
-        paddingLeft: safeAreaLeft() + 6,
-        paddingTop: 12,
-        position: 'relative',
+        paddingLeft: safeAreaLeft() + 8,
+        paddingRight: 8,
+        justifyContent: 'center',
+        flexShrink: 0,
       } as any}>
-        {/* Sliding indicator pill on the left edge, moving vertically. */}
         <view style={{
-          position: 'absolute',
-          left: 0,
-          top: `${pillX - PILL_WIDTH_PCT / 2}%`,
-          height: `${PILL_WIDTH_PCT}%`,
-          width: PILL_HEIGHT,
-          borderRadius: PILL_HEIGHT,
-          backgroundColor: SELECTED_COLOR,
-        } as any} />
-
-        {TABS.map(({ glyph, label }, i) => {
-          const isActive = i === active;
-          const color    = isActive ? SELECTED_COLOR : UNSELECTED_COLOR;
-          const set      = isActive ? 'material-rounded-filled' : 'material-rounded';
-          return (
-            <Pressable key={i} onClick={() => onTab(i)} style={{
-              flex: 1,
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: 'rgba(0,0,0,0.002)',
-              borderWidth: 0,
-              padding: 0,
-              gap: 3,
-            }}>
-              <icon set={set} style={{ fontSize: ICON_SIZE, color, lineHeight: ICON_SIZE }}>{glyph}</icon>
-              <text style={{ fontSize: 11, color, textAlign: 'center', fontWeight: isActive ? 'bold' : 'normal' }}>{label}</text>
-            </Pressable>
-          );
-        })}
+          ...glass({ radius: 34, floating: true }),
+          flexDirection: 'column',
+          paddingTop: LENS_INSET,
+          paddingBottom: LENS_INSET,
+          position: 'relative',
+        }}>
+          {/* Selection lens — slides vertically between tabs. */}
+          <view style={{
+            ...glass({ radius: 28, fill: GLASS.lens, flat: true }),
+            position: 'absolute',
+            left: LENS_INSET,
+            right: LENS_INSET,
+            top: LENS_INSET + pos * RAIL_TAB_HEIGHT,
+            height: RAIL_TAB_HEIGHT,
+          } as any} />
+          {TABS.map((_, i) => (
+            <TabItem key={i} i={i} active={active} onTab={onTab} style={{ height: RAIL_TAB_HEIGHT }} />
+          ))}
+        </view>
       </view>
     );
   }
 
+  const sab = safeAreaBottom();
+  const gap = sab > 0 ? Math.max(BAR_MIN_GAP, sab - BAR_SINK) : BAR_MIN_GAP;
+
   return (
     <view style={{
-      flexDirection: 'row',
+      paddingLeft: 16,
+      paddingRight: 16,
+      paddingBottom: gap,
       flexShrink: 0,
-      backgroundColor: NAV_BG,
-      borderTopWidth: 1,
-      borderTopColor: NAV_BORDER,
-      paddingBottom: safeAreaBottom() + 6,
-      paddingTop: 8,
-      position: 'relative',
     }}>
-      {/* Sliding indicator pill — anchored to the top edge so it reads as a
-          tab marker rather than a separator. Center-aligned via the pillX
-          percentage minus half its width. */}
       <view style={{
-        position: 'absolute',
-        top: 0,
-        left: `${pillX - PILL_WIDTH_PCT / 2}%`,
-        width: `${PILL_WIDTH_PCT}%`,
-        height: PILL_HEIGHT,
-        borderRadius: PILL_HEIGHT,
-        backgroundColor: SELECTED_COLOR,
-      } as any} />
-
-      {TABS.map(({ glyph, label }, i) => {
-        const isActive = i === active;
-        const color    = isActive ? SELECTED_COLOR : UNSELECTED_COLOR;
-        const set      = isActive ? 'material-rounded-filled' : 'material-rounded';
-        return (
-          <Pressable key={i} onClick={() => onTab(i)} style={{
+        ...glass({ radius: BAR_HEIGHT / 2, floating: true }),
+        height: BAR_HEIGHT,
+        flexDirection: 'row',
+        position: 'relative',
+      }}>
+        {/* Selection lens — a smaller glass capsule that slides under the
+            active tab. Tabs span the full bar, so tab i covers
+            [i*20%, (i+1)*20%]. A wrapper carries the %, the lens insets in it. */}
+        <view style={{
+          position: 'absolute',
+          top: LENS_INSET,
+          bottom: LENS_INSET,
+          left: `${pos * TAB_PCT}%`,
+          width: `${TAB_PCT}%`,
+          paddingLeft: LENS_INSET,
+          paddingRight: LENS_INSET,
+        } as any}>
+          <view style={{
+            ...glass({ radius: (BAR_HEIGHT - LENS_INSET * 2) / 2, fill: GLASS.lens, flat: true }),
             flex: 1,
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'rgba(0,0,0,0.002)',
-            borderWidth: 0,
-            padding: 0,
-            gap: 3,
-          }}>
-            <icon set={set} style={{ fontSize: ICON_SIZE, color, lineHeight: ICON_SIZE }}>{glyph}</icon>
-            <text style={{ fontSize: 11, color, textAlign: 'center', fontWeight: isActive ? 'bold' : 'normal' }}>{label}</text>
-          </Pressable>
-        );
-      })}
+          }} />
+        </view>
+
+        {TABS.map((_, i) => (
+          // flexBasis 0 is load-bearing: with the default `auto` basis the
+          // tabs size to their labels, while the lens is positioned at even
+          // fifths. Pinning the basis makes the two agree.
+          <TabItem key={i} i={i} active={active} onTab={onTab} style={{ flex: 1, flexBasis: 0 }} />
+        ))}
+      </view>
     </view>
   );
 }

@@ -1,6 +1,9 @@
 import React, { useState, useRef } from 'react';
 import { C } from '../theme';
 import { CONTENT_MAX_WIDTH } from '../responsive';
+import { safeAreaTop } from '../safeArea';
+import { GlassButton } from '../components/GlassButton';
+import { checkModeration } from '../api';
 
 type Mode = 'login' | 'signup';
 
@@ -111,26 +114,26 @@ function LoginForm({ onAuth, onSwitch }: { onAuth: () => void; onSwitch: () => v
         </view>
       ) : null}
 
-      <button
+      <GlassButton
         onClick={submit}
         style={{
-          backgroundColor: canSubmit ? C.green : C.surface,
+          backgroundColor: canSubmit ? C.primary : C.surface,
           borderRadius: 14, borderWidth: 0,
           paddingTop: 15, paddingBottom: 15,
           alignItems: 'center', justifyContent: 'center',
           marginBottom: 20,
         }}
       >
-        <text style={{ color: canSubmit ? C.bg : C.secondary, fontSize: 15, fontWeight: 'bold' }}>
+        <text style={{ color: canSubmit ? C.onPrimary : C.secondary, fontSize: 15, fontWeight: 'bold' }}>
           {loading ? 'Signing In...' : 'Log In'}
         </text>
-      </button>
+      </GlassButton>
 
       <view style={{ flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
         <text style={{ color: C.secondary, fontSize: 13 }}>Don't have an account?</text>
-        <button onClick={onSwitch} style={{ backgroundColor: 'rgba(0,0,0,0)', borderWidth: 0, padding: 0 }}>
-          <text style={{ color: C.green, fontSize: 13, fontWeight: 'bold' }}>Sign Up</text>
-        </button>
+        <GlassButton onClick={onSwitch} style={{ backgroundColor: 'rgba(0,0,0,0)', borderWidth: 0, padding: 0 }}>
+          <text style={{ color: C.primary, fontSize: 13, fontWeight: 'bold' }}>Sign Up</text>
+        </GlassButton>
       </view>
     </view>
   );
@@ -163,7 +166,7 @@ function DropPicker({ value, onChange, options, placeholder }: {
 
   return (
     <view style={{ flexDirection: 'column', position: 'relative' }}>
-      <button
+      <GlassButton
         onClick={() => setOpen(o => !o)}
         style={{
           backgroundColor: C.card,
@@ -178,11 +181,11 @@ function DropPicker({ value, onChange, options, placeholder }: {
           justifyContent: 'space-between',
         }}
       >
-        <text style={{ fontSize: 14, color: value ? C.text : C.secondary, flex: 1 }}>
+        <text style={{ fontSize: 14, color: value ? C.text : C.secondary, flex: 1, textAlign: 'left' }}>
           {displayLabel}
         </text>
         <icon set="material-rounded" style={{ fontSize: 18, color: C.secondary, lineHeight: 18 }}>{open ? 'expand_less' : 'expand_more'}</icon>
-      </button>
+      </GlassButton>
 
       {open && (
         <view style={{
@@ -199,7 +202,7 @@ function DropPicker({ value, onChange, options, placeholder }: {
         }}>
           <scroll className="pludo-scroll" style={{ height: 160 }}>
             {options.map(opt => (
-              <button
+              <GlassButton
                 key={opt.value}
                 onClick={() => { onChange(opt.value); setOpen(false); }}
                 style={{
@@ -210,10 +213,10 @@ function DropPicker({ value, onChange, options, placeholder }: {
                   alignItems: 'flex-start',
                 }}
               >
-                <text style={{ fontSize: 13, color: opt.value === value ? C.green : C.text }}>
+                <text style={{ fontSize: 13, color: opt.value === value ? C.primary : C.text, textAlign: 'left' }}>
                   {opt.label}
                 </text>
-              </button>
+              </GlassButton>
             ))}
           </scroll>
         </view>
@@ -282,6 +285,8 @@ function SignUpForm({ onAuth, onSwitch }: { onAuth: () => void; onSwitch: () => 
     setLoading(true);
     setError('');
     try {
+      const blocked = await checkModeration('username', username.trim());
+      if (blocked) { setError(blocked); return; }
       const err = await callGlobal('signUp', email.trim(), password, username.trim(), birthday);
       if (err) { setError(err); }
       else      { onAuth(); }
@@ -346,20 +351,20 @@ function SignUpForm({ onAuth, onSwitch }: { onAuth: () => void; onSwitch: () => 
         </view>
       ) : null}
 
-      <button
+      <GlassButton
         onClick={submit}
         style={{
-          backgroundColor: canSubmit ? C.green : C.surface,
+          backgroundColor: canSubmit ? C.primary : C.surface,
           borderRadius: 14, borderWidth: 0,
           paddingTop: 15, paddingBottom: 15,
           alignItems: 'center', justifyContent: 'center',
           marginBottom: 12,
         }}
       >
-        <text style={{ color: canSubmit ? C.bg : C.secondary, fontSize: 15, fontWeight: 'bold' }}>
+        <text style={{ color: canSubmit ? C.onPrimary : C.secondary, fontSize: 15, fontWeight: 'bold' }}>
           {loading ? 'Creating Account...' : 'Sign Up'}
         </text>
-      </button>
+      </GlassButton>
 
       {/* Legal disclaimer */}
       <text style={{ fontSize: 11, color: C.secondary, textAlign: 'center', marginBottom: 20, lineHeight: 16 }}>
@@ -368,9 +373,9 @@ function SignUpForm({ onAuth, onSwitch }: { onAuth: () => void; onSwitch: () => 
 
       <view style={{ flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
         <text style={{ color: C.secondary, fontSize: 13 }}>Already have an account?</text>
-        <button onClick={onSwitch} style={{ backgroundColor: 'rgba(0,0,0,0)', borderWidth: 0, padding: 0 }}>
-          <text style={{ color: C.green, fontSize: 13, fontWeight: 'bold' }}>Log In</text>
-        </button>
+        <GlassButton onClick={onSwitch} style={{ backgroundColor: 'rgba(0,0,0,0)', borderWidth: 0, padding: 0 }}>
+          <text style={{ color: C.primary, fontSize: 13, fontWeight: 'bold' }}>Log In</text>
+        </GlassButton>
       </view>
     </view>
   );
@@ -387,8 +392,8 @@ export function AuthScreen({ onAuth }: Props) {
           stretch edge-to-edge across the wider portrait canvas. */}
       <view style={{ flex: 1, width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center', flexDirection: 'column' }}>
         {/* Header */}
-        <view style={{ alignItems: 'center', paddingTop: 60, paddingBottom: 32 }}>
-          <text style={{ fontSize: 32, color: C.green, fontWeight: 'bold', letterSpacing: -1 }}>Pludo</text>
+        <view style={{ alignItems: 'center', paddingTop: safeAreaTop() + 16, paddingBottom: 32 }}>
+          <text style={{ fontSize: 32, color: C.primary, fontWeight: 'bold', letterSpacing: -1 }}>Pludo</text>
           <text style={{ fontSize: 14, color: C.secondary, marginTop: 4 }}>
             {mode === 'login' ? 'Welcome back' : 'Create your account'}
           </text>

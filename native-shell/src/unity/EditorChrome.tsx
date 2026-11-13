@@ -82,7 +82,7 @@ const LIGHT = [
   { key: 'golden_hour', label: 'Golden' }, { key: 'night', label: 'Dim' },
 ];
 const GROUND = [
-  { key: '', label: 'Gray' }, { key: 'grass', label: 'Grass' }, { key: 'dirt', label: 'Dirt' },
+  { key: '', label: 'Grass' }, { key: 'gray', label: 'Gray' }, { key: 'dirt', label: 'Dirt' },
   { key: 'sand', label: 'Sand' }, { key: 'stone', label: 'Stone' }, { key: 'snow', label: 'Snow' },
 ];
 

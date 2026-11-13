@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { C } from '../theme';
 import { CONTENT_MAX_WIDTH } from '../responsive';
 import { safeAreaTop } from '../safeArea';
+import { bottomNavInset } from '../components/BottomNav';
+import { GlassButton } from '../components/GlassButton';
 
 // ── Shared UI primitives ─────────────────────────────────────────────────────
 
@@ -34,13 +36,14 @@ function SubScreenShell({ onBack, title, children }: SubProps) {
     <view style={{ flex: 1, backgroundColor: C.bg, flexDirection: 'column' }}>
       <view style={{ flex: 1, width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center', flexDirection: 'column' }}>
         <view style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 20, paddingTop: safeAreaTop() + 4, paddingBottom: 12, gap: 12 }}>
-          <button onClick={onBack} style={{ backgroundColor: 'rgba(0,0,0,0.002)', borderWidth: 0, padding: 4 }}>
-            <icon set="material-rounded" style={{ fontSize: 24, color: C.green, lineHeight: 24 }}>arrow_back</icon>
-          </button>
+          <GlassButton onClick={onBack} style={{ backgroundColor: 'rgba(0,0,0,0.002)', borderWidth: 0, padding: 4 }}>
+            <icon set="material-rounded" style={{ fontSize: 24, color: C.text, lineHeight: 24 }}>arrow_back</icon>
+          </GlassButton>
           <text style={{ fontSize: 24, color: C.text, fontWeight: 'bold', flex: 1 }}>{title}</text>
         </view>
         <scroll className="pludo-scroll" style={{ flex: 1, height: 1, paddingLeft: 16, paddingRight: 16, paddingTop: 4 }}>
           {children}
+          <view style={{ height: bottomNavInset() }} />
         </scroll>
       </view>
     </view>
@@ -62,18 +65,18 @@ function Divider() {
 interface ToggleRowProps { label: string; sublabel?: string; value: boolean; onChange: (v: boolean) => void; }
 function ToggleRow({ label, sublabel, value, onChange }: ToggleRowProps) {
   return (
-    <button onClick={() => onChange(!value)} style={{
+    <GlassButton onClick={() => onChange(!value)} style={{
       paddingLeft: 16, paddingRight: 16, paddingTop: 14, paddingBottom: 14,
       backgroundColor: 'rgba(0,0,0,0.002)', borderWidth: 0,
     }}>
-      <view style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+      <view style={{ width: '100%', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
         <view style={{ flex: 1 }}>
-          <text style={{ fontSize: 15, color: C.text }}>{label}</text>
-          {sublabel ? <text style={{ fontSize: 12, color: C.secondary, marginTop: 2 }}>{sublabel}</text> : null}
+          <text style={{ fontSize: 15, color: C.text, textAlign: 'left' }}>{label}</text>
+          {sublabel ? <text style={{ fontSize: 12, color: C.secondary, marginTop: 2, textAlign: 'left' }}>{sublabel}</text> : null}
         </view>
         <view style={{
           width: 44, height: 26, borderRadius: 13,
-          backgroundColor: value ? C.green : 'rgba(255,255,255,0.15)',
+          backgroundColor: value ? C.primary : 'rgba(255,255,255,0.15)',
           justifyContent: 'center', paddingLeft: 3, paddingRight: 3,
           flexDirection: 'row', alignItems: 'center',
         }}>
@@ -81,7 +84,7 @@ function ToggleRow({ label, sublabel, value, onChange }: ToggleRowProps) {
             marginLeft: value ? 18 : 0, marginRight: value ? 0 : 18 }} />
         </view>
       </view>
-    </button>
+    </GlassButton>
   );
 }
 
@@ -184,17 +187,17 @@ function AccountScreen({ onBack }: { onBack: () => void }) {
         </view>
       </Card>
 
-      <button onClick={save} style={{
-        backgroundColor: canSave ? C.green : 'rgba(255,255,255,0.08)',
+      <GlassButton onClick={save} style={{
+        backgroundColor: canSave ? C.primary : 'rgba(255,255,255,0.08)',
         borderRadius: 14, borderWidth: 0,
         paddingTop: 14, paddingBottom: 14,
         alignItems: 'center', justifyContent: 'center',
         marginBottom: 12,
       }}>
-        <text style={{ fontSize: 15, color: canSave ? '#fff' : C.secondary, fontWeight: 'bold' }}>
+        <text style={{ fontSize: 15, color: canSave ? C.onPrimary : C.secondary, fontWeight: 'bold' }}>
           {saving ? 'Saving…' : 'Save changes'}
         </text>
-      </button>
+      </GlassButton>
 
       {status ? (
         <text style={{ fontSize: 13, color: status.kind === 'ok' ? C.green : C.red, textAlign: 'center', marginBottom: 24 }}>
@@ -289,16 +292,16 @@ function DisplayScreen({ onBack }: { onBack: () => void }) {
           {SCALES.map(s => {
             const active = s.key === scale;
             return (
-              <button key={s.key} onClick={() => pickScale(s.key)} style={{
+              <GlassButton key={s.key} onClick={() => pickScale(s.key)} style={{
                 flex: 1,
                 paddingTop: 12, paddingBottom: 12,
                 borderRadius: 10, borderWidth: 1,
-                borderColor: active ? C.green : C.border,
-                backgroundColor: active ? 'rgba(48,209,88,0.12)' : 'rgba(255,255,255,0.04)',
+                borderColor: active ? C.primary : C.border,
+                backgroundColor: active ? C.primaryTint : 'rgba(255,255,255,0.04)',
                 alignItems: 'center', justifyContent: 'center',
               }}>
-                <text style={{ fontSize: 14, color: active ? C.green : C.text, fontWeight: 'bold' }}>{s.label}</text>
-              </button>
+                <text style={{ fontSize: 14, color: active ? C.primary : C.text, fontWeight: 'bold' }}>{s.label}</text>
+              </GlassButton>
             );
           })}
         </view>
@@ -335,26 +338,26 @@ function SoundScreen({ onBack }: { onBack: () => void }) {
         <view style={{ paddingLeft: 16, paddingRight: 16, paddingTop: 16, paddingBottom: 16 }}>
           <view style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
             <text style={{ fontSize: 14, color: C.text, flex: 1 }}>{pct}%</text>
-            <button onClick={() => applyVolume(0)} style={{ backgroundColor: 'rgba(0,0,0,0.002)', borderWidth: 0 }}>
+            <GlassButton onClick={() => applyVolume(0)} style={{ backgroundColor: 'rgba(0,0,0,0.002)', borderWidth: 0 }}>
               <text style={{ fontSize: 12, color: C.secondary }}>Mute</text>
-            </button>
+            </GlassButton>
           </view>
           <view style={{ height: 6, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 3, overflow: 'hidden' }}>
-            <view style={{ width: `${pct}%`, height: '100%', backgroundColor: C.green }} />
+            <view style={{ width: `${pct}%`, height: '100%', backgroundColor: C.primary }} />
           </view>
           <view style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-            <button onClick={() => applyVolume(volume - 0.1)} style={{
+            <GlassButton onClick={() => applyVolume(volume - 0.1)} style={{
               flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 0,
               borderRadius: 10, paddingTop: 10, paddingBottom: 10, alignItems: 'center', justifyContent: 'center',
             }}>
               <icon set="material-rounded" style={{ fontSize: 20, color: C.text, lineHeight: 20 }}>remove</icon>
-            </button>
-            <button onClick={() => applyVolume(volume + 0.1)} style={{
+            </GlassButton>
+            <GlassButton onClick={() => applyVolume(volume + 0.1)} style={{
               flex: 1, backgroundColor: 'rgba(255,255,255,0.06)', borderWidth: 0,
               borderRadius: 10, paddingTop: 10, paddingBottom: 10, alignItems: 'center', justifyContent: 'center',
             }}>
               <icon set="material-rounded" style={{ fontSize: 20, color: C.text, lineHeight: 20 }}>add</icon>
-            </button>
+            </GlassButton>
           </view>
         </view>
       </Card>
@@ -479,9 +482,9 @@ export function SettingsScreen({ onNavigate, onLogout }: Props) {
       <view style={{ flex: 1, width: '100%', maxWidth: CONTENT_MAX_WIDTH, alignSelf: 'center', flexDirection: 'column' }}>
 
       <view style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 20, paddingTop: safeAreaTop() + 4, paddingBottom: 12, gap: 12 }}>
-        <button onClick={() => onNavigate(0)} style={{ backgroundColor: 'rgba(0,0,0,0.002)', borderWidth: 0, padding: 4 }}>
-          <icon set="material-rounded" style={{ fontSize: 24, color: C.green, lineHeight: 24 }}>arrow_back</icon>
-        </button>
+        <GlassButton onClick={() => onNavigate(0)} style={{ backgroundColor: 'rgba(0,0,0,0.002)', borderWidth: 0, padding: 4 }}>
+          <icon set="material-rounded" style={{ fontSize: 24, color: C.text, lineHeight: 24 }}>arrow_back</icon>
+        </GlassButton>
         <text style={{ fontSize: 24, color: C.text, fontWeight: 'bold', flex: 1 }}>Settings</text>
       </view>
 
@@ -490,18 +493,18 @@ export function SettingsScreen({ onNavigate, onLogout }: Props) {
         <view style={{ backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.border, overflow: 'hidden', marginBottom: 24 }}>
           {ROWS.map((s, i) => (
             <view key={s.key}>
-              <button onClick={() => setSub(s.key)} style={{
+              <GlassButton onClick={() => setSub(s.key)} style={{
                 paddingLeft: 16, paddingRight: 16, paddingTop: 16, paddingBottom: 16,
                 backgroundColor: 'rgba(0,0,0,0.002)', borderWidth: 0,
               }}>
-                <view style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+                <view style={{ width: '100%', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                   <view style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <icon set="material-rounded" style={{ fontSize: 20, color: C.text, lineHeight: 20 }}>{s.icon}</icon>
                   </view>
-                  <text style={{ fontSize: 16, color: C.text, flex: 1 }}>{s.label}</text>
+                  <text style={{ fontSize: 16, color: C.text, flex: 1, textAlign: 'left' }}>{s.label}</text>
                   <icon set="material-rounded" style={{ fontSize: 20, color: C.secondary, lineHeight: 20 }}>chevron_right</icon>
                 </view>
-              </button>
+              </GlassButton>
               {i < ROWS.length - 1 && (
                 <view style={{ height: 1, backgroundColor: C.border, marginLeft: 66 }} />
               )}
@@ -509,12 +512,14 @@ export function SettingsScreen({ onNavigate, onLogout }: Props) {
           ))}
         </view>
 
-        <button onClick={onLogout} style={{
+        <GlassButton onClick={onLogout} style={{
           backgroundColor: C.card, borderRadius: 16, borderWidth: 1, borderColor: C.border,
           paddingTop: 16, paddingBottom: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 24,
         }}>
           <text style={{ fontSize: 16, color: C.red, fontWeight: 'bold' }}>Sign Out</text>
-        </button>
+        </GlassButton>
+
+        <view style={{ height: bottomNavInset() }} />
 
       </scroll>
       </view>

@@ -141,6 +141,109 @@ end)
             r.AdvancedOptions.AfterStart.AddListener(() => RegisterGlobals(r));
         }
         Debug.Log($"[GameLauncher] loadGame/exitGame registered on {renderers.Length} renderer(s).");
+        InitSpawnMarkerThumbnail();
+    }
+
+    // ── Spawn-marker tray thumbnail ────────────────────────────────────────────
+    // Renders a small isolated snapshot of the user's current chibi avatar (body
+    // color only — equipped items are skipped so this stays a quick local render
+    // instead of a network fetch) and pushes it to React as a data: URI, so the
+    // editor's spawn-point tray tile shows a real picture instead of "SP" text
+    // initials. Fires once at startup and again whenever the avatar changes, so
+    // the icon can't go stale mid-session.
+    private bool _spawnMarkerThumbSubscribed;
+    private void InitSpawnMarkerThumbnail()
+    {
+        if (!_spawnMarkerThumbSubscribed)
+        {
+            _spawnMarkerThumbSubscribed = true;
+            var mgr = AvatarStateManager.Instance;
+            if (mgr != null) mgr.OnAvatarChanged += _ => StartCoroutine(RenderSpawnMarkerThumbnail());
+        }
+        StartCoroutine(RenderSpawnMarkerThumbnail());
+    }
+
+    private const int   SpawnThumbSize   = 160;
+    private const float SpawnThumbMargin = 1.12f; // headroom around the tight bounds
+
+    private IEnumerator RenderSpawnMarkerThumbnail()
+    {
+        yield return null; // let AvatarStateManager finish its PlayerPrefs load first
+
+        Color bodyCol = new Color(0.83f, 0.64f, 0.51f);
+        var mgr = AvatarStateManager.Instance;
+        if (mgr?.Avatar != null && !string.IsNullOrEmpty(mgr.Avatar.bodyColor))
+            ColorUtility.TryParseHtmlString(mgr.Avatar.bodyColor, out bodyCol);
+
+        // Staged far from the origin so it can never overlap GameAssetLoader's own
+        // staging area (y = -1000) or an active game's world.
+        var stage = new GameObject("[SpawnThumbStage]");
+        stage.transform.position = new Vector3(0f, -4000f, 0f);
+
+        var visual = GameRenderClient.BuildChibiVisual(stage.transform, bodyCol, out _);
+        if (visual == null) { Destroy(stage); yield break; }
+
+        // Reuse the "AvatarPreview" layer the You-tab preview camera already
+        // isolates on, so nothing else in the scene can leak into this render.
+        int layer = LayerMask.NameToLayer("AvatarPreview");
+        if (layer < 0) layer = 0;
+        SetLayerRecursively(stage, layer);
+
+        // SkinnedMeshRenderer bounds are zero until the first skinning pass —
+        // same wait every other chibi build in this codebase does.
+        Bounds b = default; bool got = false;
+        for (int attempt = 0; attempt < 5; attempt++)
+        {
+            yield return new WaitForEndOfFrame();
+            got = false;
+            foreach (var r in visual.GetComponentsInChildren<Renderer>())
+            {
+                if (!r.enabled) continue;
+                if (!got) { b = r.bounds; got = true; } else b.Encapsulate(r.bounds);
+            }
+            if (got && b.size.sqrMagnitude > 0.0001f) break;
+        }
+        if (!got) { Destroy(stage); yield break; }
+
+        var camGo = new GameObject("[SpawnThumbCam]");
+        camGo.transform.position = b.center + new Vector3(b.extents.magnitude, b.extents.y * 0.15f, b.extents.magnitude);
+        camGo.transform.LookAt(b.center);
+        var cam = camGo.AddComponent<Camera>();
+        cam.orthographic     = true;
+        cam.orthographicSize = Mathf.Max(b.extents.x, b.extents.y, b.extents.z) * SpawnThumbMargin;
+        cam.cullingMask      = (layer == 0) ? cam.cullingMask : (1 << layer);
+        cam.clearFlags       = CameraClearFlags.SolidColor;
+        cam.backgroundColor  = new Color(0f, 0f, 0f, 0f); // transparent — tray tile paints its own background
+        cam.nearClipPlane    = 0.01f;
+        cam.farClipPlane     = b.extents.magnitude * 4f + 1f;
+
+        var rt = new RenderTexture(SpawnThumbSize, SpawnThumbSize, 16, RenderTextureFormat.ARGB32);
+        cam.targetTexture = rt;
+        yield return new WaitForEndOfFrame();
+        cam.Render();
+
+        var prevActive = RenderTexture.active;
+        RenderTexture.active = rt;
+        var tex = new Texture2D(SpawnThumbSize, SpawnThumbSize, TextureFormat.RGBA32, false);
+        tex.ReadPixels(new Rect(0, 0, SpawnThumbSize, SpawnThumbSize), 0, 0);
+        tex.Apply();
+        RenderTexture.active = prevActive;
+
+        var png = tex.EncodeToPNG();
+        Destroy(tex);
+        cam.targetTexture = null;
+        rt.Release();
+        Destroy(rt);
+        Destroy(camGo);
+        Destroy(stage);
+
+        SetGlobal("_spawnMarkerThumbnail", "data:image/png;base64," + Convert.ToBase64String(png));
+    }
+
+    private static void SetLayerRecursively(GameObject go, int layer)
+    {
+        go.layer = layer;
+        foreach (Transform child in go.transform) SetLayerRecursively(child.gameObject, layer);
     }
 
     public void RegisterGlobals(ReactRendererUGUI renderer)
@@ -197,6 +300,16 @@ end)
         renderer.Globals["editorClearSelectionFraming"] = new Action(() =>
             EditorCameraController.Instance?.EndRightAreaFraming());
 
+        // Click-to-assign mode for Custom Logic's Variables Assign button:
+        // hides the current selection and routes the next viewport tap to
+        // report the clicked object's name via the _editorPickResult global
+        // instead of selecting it normally. CancelPickObject (the pill's X)
+        // backs out without a result.
+        renderer.Globals["editorBeginPickObject"]  = new Action(() =>
+            EditorCameraController.Instance?.BeginPickObject());
+        renderer.Globals["editorCancelPickObject"] = new Action(() =>
+            EditorCameraController.Instance?.CancelPickObject());
+
         // Editor drag-and-drop placement: React drops an asset tile onto the
         // preview viewport and calls this with the release point in raw screen
         // pixels (Unity's bottom-left origin; React reads them via getPointerX/Y).
@@ -250,6 +363,16 @@ end)
         renderer.Globals["getPointerX"]   = new Func<float>(() => EditorPointerPos().x);
         renderer.Globals["getPointerY"]   = new Func<float>(() => EditorPointerPos().y);
         renderer.Globals["isPointerDown"] = new Func<string>(() => EditorPointerDown() ? "true" : "false");
+        // Same raw pointer, converted to React reference units (top-left origin) —
+        // the same space every <view style={{top,left}}> is laid out in. Mirrors
+        // EditorCameraController.PublishSelectionBounds's exact conversion
+        // (raw px / GetReactCanvasScale, Y flipped against Screen.height) so the
+        // Interface Builder's 2D drag-and-drop canvas can track the finger
+        // without any DOM measurement API (which ReactUnity doesn't provide).
+        renderer.Globals["getPointerRefX"] = new Func<float>(() =>
+            EditorPointerPos().x / Mathf.Max(GetReactCanvasScale(), 0.01f));
+        renderer.Globals["getPointerRefY"] = new Func<float>(() =>
+            (Screen.height - EditorPointerPos().y) / Mathf.Max(GetReactCanvasScale(), 0.01f));
         // Drag-to-place: called when the user drags a strip tile past the tap-slop
         // threshold. Spawns the actual asset at the current screen position and
         // immediately enters the move-selected state so the finger that is still
@@ -281,9 +404,27 @@ end)
         renderer.Globals["getSafeAreaBottom"] = new Func<float>(SafeAreaBottomRef);
         renderer.Globals["getSafeAreaLeft"]   = new Func<float>(SafeAreaLeftRef);
         renderer.Globals["getSafeAreaRight"]  = new Func<float>(SafeAreaRightRef);
+        // Rotation gate. EnterGameOrientationAsync locks landscape and swaps the
+        // React canvas to landscape reference units (844×390) synchronously, but
+        // the OS takes a few hundred ms to actually rotate. In that window the
+        // canvas is still physically portrait, so a landscape layout gets
+        // squeezed into a 390-wide box — every panel bunches up toward the
+        // top-left — and the insets below still report portrait values (side
+        // insets 0). Everything then snaps outward the frame the rotation lands.
+        // React polls this and holds the editor chrome back until the geometry
+        // agrees with the requested orientation, so the UI is laid out correctly
+        // on its very first visible frame instead of glitching into the corner.
+        renderer.Globals["getLandscapeReady"] = new Func<string>(() => LandscapeReady() ? "true" : "false");
         // Tablet/phone idiom — drives React's responsive.ts (multi-column grids,
         // centered max-width content, side-rail nav). See DeviceIdiom.cs.
         renderer.Globals["getIsTablet"] = new Func<bool>(() => DeviceIdiom.IsTablet);
+        // Viewport width in React reference units (the same 390×844-style space
+        // the safe-area insets are reported in). Panels that switch between a
+        // multi-column and a stacked layout need the real available width, not
+        // just the device idiom — an iPhone in landscape has room for columns an
+        // iPad in portrait does not. Read live so rotation is picked up.
+        renderer.Globals["getUiWidth"] = new Func<float>(() =>
+            Screen.width / Mathf.Max(GetReactCanvasScale(), 0.01f));
         // System color scheme — React reads this from theme.ts at module load
         // so the app background matches the device theme (black in dark mode,
         // white in light mode). Unity does NOT expose a cross-platform dark-mode
@@ -325,11 +466,11 @@ end)
                 Convert.ToString(name)  ?? "",
                 Convert.ToString(key)   ?? "",
                 Convert.ToString(value) ?? ""));
-        // Custom Logic (node-graph) panel — React pushes the full graph JSON on
-        // every edit. Routed to the currently-selected GameObject so the graph
-        // travels with it via the EditorObjectLogic component. EditorObjectLogic
-        // is tolerant of malformed JSON so a partially-typed payload from React
-        // can't blank out the prior graph.
+        // Custom Logic (workflow) panel — React pushes the full workflow list
+        // JSON on every edit. Routed to the currently-selected GameObject so the
+        // workflows travel with it via the EditorObjectLogic component.
+        // EditorObjectLogic is tolerant of malformed JSON so a partially-typed
+        // payload from React can't blank out the prior workflows.
         renderer.Globals["editorSetObjectLogic"] = new Action<object, object>((name, graphJson) =>
             EditorCameraController.Instance?.SetObjectLogic(
                 Convert.ToString(name)      ?? "",
@@ -341,6 +482,10 @@ end)
         // script has executed and all Object.Create calls have returned,
         // React calls editorApplyState(json) to reapply the saved snapshot.
         renderer.Globals["editorCaptureState"] = new Func<string>(() => EditorState.Capture(LuauGameRunner.Instance));
+        // Variables pane (workflow editor): the listing of what can be given a
+        // name — every top-level scene object plus the child elements connected
+        // to it. Read-only; React re-reads it each time the add flow opens.
+        renderer.Globals["editorListSceneNodes"] = new Func<string>(() => EditorState.ListSceneNodes(LuauGameRunner.Instance));
         renderer.Globals["editorApplyState"]   = new Action<object>(json =>
             EditorState.Apply(LuauGameRunner.Instance, Convert.ToString(json) ?? ""));
         // Reconciling apply for session undo/redo: makes the scene match the
@@ -371,6 +516,20 @@ end)
         renderer.Globals["editorSetHudButtons"] = new Action<object>(json =>
         {
             SceneSettings.HudButtonsJson = Convert.ToString(json) ?? "";
+            EditorCameraController.MarkStateDirty();
+        });
+        // Interface Builder (Design/Logic tabs): same full-payload-JSON pattern as
+        // editorSetHudButtons above, for the newer IfaceElement/IfaceWorkflow
+        // arrays. Read-back happens generically through editorGetSceneSettings
+        // since both fields are serialized by SceneSettings.ToJson().
+        renderer.Globals["editorSetInterfaceElements"] = new Action<object>(json =>
+        {
+            SceneSettings.InterfaceElementsJson = Convert.ToString(json) ?? "";
+            EditorCameraController.MarkStateDirty();
+        });
+        renderer.Globals["editorSetInterfaceWorkflows"] = new Action<object>(json =>
+        {
+            SceneSettings.InterfaceWorkflowsJson = Convert.ToString(json) ?? "";
             EditorCameraController.MarkStateDirty();
         });
         // In-game: React fires this when a HudButton with action="event" is tapped.
@@ -539,10 +698,31 @@ end)
     private const float EditorInsetPortraitTop     = 47f;
     private const float EditorInsetPortraitBottom  = 34f;
 
+    // iPads have no notch, so the landscape SIDE inset above (a Dynamic Island
+    // allowance) must not apply to them: the tablet lobby is landscape, and a
+    // phantom 50pt left inset visibly squeezes the nav rail's icons in the
+    // Device Simulator. Only the home-indicator inset is real on iPad.
+    private const float EditorInsetTabletLandscapeBottom = 20f;
+
     private static bool IsLandscape() =>
         Screen.orientation == ScreenOrientation.LandscapeLeft  ||
         Screen.orientation == ScreenOrientation.LandscapeRight ||
         Screen.width > Screen.height;
+
+    // "Landscape has been requested AND the screen has actually rotated."
+    // Deliberately checks the physical dimensions rather than
+    // Screen.orientation: on device the enum flips the instant we assign it
+    // while the backbuffer (and Screen.safeArea) lag behind, and the Editor
+    // Device Simulator can report LandscapeLeft while still drawing portrait.
+    // The dimensions are what the CanvasScaler and the safe-area math actually
+    // consume, so they are the only signal that means React can lay out
+    // landscape UI and have it land in the right place.
+    private static bool LandscapeReady()
+    {
+        var mgr = MobileOrientationManager.Instance;
+        if (mgr == null || !mgr.IsGameOrientationLocked) return false;
+        return Screen.width > Screen.height;
+    }
 
     private static float SafeAreaTopRef()    =>
 #if UNITY_EDITOR
@@ -553,21 +733,23 @@ end)
 
     internal static float SafeAreaBottomRef() =>
 #if UNITY_EDITOR
-        IsLandscape() ? EditorInsetLandscapeBottom : EditorInsetPortraitBottom;
+        IsLandscape()
+            ? (DeviceIdiom.IsTablet ? EditorInsetTabletLandscapeBottom : EditorInsetLandscapeBottom)
+            : EditorInsetPortraitBottom;
 #else
         SafeAreaInsetRef(Screen.safeArea.y, Screen.height);
 #endif
 
     private static float SafeAreaLeftRef()   =>
 #if UNITY_EDITOR
-        IsLandscape() ? EditorInsetLandscapeSide : 0f;
+        IsLandscape() && !DeviceIdiom.IsTablet ? EditorInsetLandscapeSide : 0f;
 #else
         SafeAreaInsetRef(Screen.safeArea.x, Screen.width);
 #endif
 
     private static float SafeAreaRightRef()  =>
 #if UNITY_EDITOR
-        IsLandscape() ? EditorInsetLandscapeSide : 0f;
+        IsLandscape() && !DeviceIdiom.IsTablet ? EditorInsetLandscapeSide : 0f;
 #else
         SafeAreaInsetRef(Screen.width - Screen.safeArea.xMax, Screen.width);
 #endif
@@ -858,13 +1040,28 @@ end)
                 await MobileOrientationManager.Instance.EnterGameOrientationAsync();
         }
         bool launched = false;
+        // Set when an edit-mode load fails before RunGamePreview ever runs. Keeps the
+        // editor UI (already mounted by React) open with a persistent error banner
+        // instead of snapping back to portrait and leaving a black, unexplained
+        // viewport behind it — see the LOAD_FAILED banner in CreateScreen.tsx.
+        bool keepEditorOpenOnError = false;
 
         try
         {
             // Validate data
             if (preFetchError != null || data == null)
             {
-                ShowToast($"Could not load game: {preFetchError ?? "no data"}");
+                string reason = preFetchError ?? "no response from server";
+                Debug.LogError($"[GameLauncher] Failed to fetch game {data?.id.ToString() ?? "?"} for {(editMode ? "edit" : "play")}: {reason}");
+                if (editMode)
+                {
+                    keepEditorOpenOnError = true;
+                    SetEditorError($"LOAD_FAILED:Couldn't load this game — {reason}");
+                }
+                else
+                {
+                    ShowToast($"Could not load game: {reason}");
+                }
                 return;
             }
 
@@ -978,7 +1175,7 @@ end)
                 // race the new launch — the user sees "rotates landscape then
                 // snaps back" because the old launch's exit fires AFTER the
                 // new launch's enter.
-                if (!skipOrientation && !ct.IsCancellationRequested)
+                if (!skipOrientation && !ct.IsCancellationRequested && !keepEditorOpenOnError)
                     MobileOrientationManager.Instance?.ExitGameOrientation();
                 if (PludoServices.Multiplayer?.IsInRoom == true)
                     await PludoServices.Multiplayer.LeaveRoomAsync();

@@ -900,7 +900,7 @@ public partial class LuauGameRunner : MonoBehaviour
                 _playerInstance.transform.position = pos;
                 // Zero velocity so a teleport from a falling state doesn't keep falling.
                 var rb = _playerInstance.GetComponent<Rigidbody>();
-                if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+                if (rb != null && !rb.isKinematic) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
             }
             else SpawnPlayer(pos);
             if (_previewMode) EditorCameraController.Instance?.SetSpawn(pos);
@@ -930,7 +930,7 @@ public partial class LuauGameRunner : MonoBehaviour
         {
             _playerInstance.transform.position = pos;
             var rb = _playerInstance.GetComponent<Rigidbody>();
-            if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+            if (rb != null && !rb.isKinematic) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
         }
         if (_previewMode) EditorCameraController.Instance?.SetSpawn(pos);
     }
@@ -1164,7 +1164,7 @@ public partial class LuauGameRunner : MonoBehaviour
         if (_playerInstance == null) return;
         _playerInstance.transform.position = _lastSpawnPos;
         var rb = _playerInstance.GetComponent<Rigidbody>();
-        if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+        if (rb != null && !rb.isKinematic) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
         _health = 100f;
         NotifyReact("_gameHealth", "100");
         Debug.Log($"[LuauGameRunner] Respawned ({reason}) at {_lastSpawnPos}.");
@@ -1274,11 +1274,13 @@ public partial class LuauGameRunner : MonoBehaviour
         if (_playerInstance == null) return;
         _playerInstance.transform.position = new Vector3(x, y, z);
         var rb = _playerInstance.GetComponent<Rigidbody>();
-        if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+        if (rb != null && !rb.isKinematic) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
     });
 
     public Vector3 GetPlayerVelocity() => MT(() =>
     {
+        var pc = _playerInstance != null ? _playerInstance.GetComponent<LuauPlayerController>() : null;
+        if (pc != null) return pc.Velocity;
         var rb = _playerInstance?.GetComponent<Rigidbody>();
         return rb != null ? rb.linearVelocity : Vector3.zero;
     });
@@ -1327,9 +1329,12 @@ public partial class LuauGameRunner : MonoBehaviour
         _playerInstance.tag = "Player";
 
         // Physics capsule on the root — visual is a separate child
+        // Kinematic: LuauPlayerController moves the player with the shared
+        // RobloxCharacterMotor. The body stays so trigger volumes still fire.
         var rb = _playerInstance.AddComponent<Rigidbody>();
+        rb.isKinematic            = true;
+        rb.useGravity             = false;
         rb.constraints            = RigidbodyConstraints.FreezeRotation;
-        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
         var col = _playerInstance.AddComponent<CapsuleCollider>();
         col.center = new Vector3(0f, 1f, 0f);
         col.height = 2f;
@@ -2176,7 +2181,7 @@ public partial class LuauGameRunner : MonoBehaviour
 
     // Instantiates idle.fbx as a hidden pose source (its bone hierarchy matches its own
     // animation curves), loads each AnimationClip, and samples them directly each LateUpdate
-    // via SampleAnimation — no Animator involved, so looping is fully under our control.
+    // via PoseSampler (a manual PlayableGraph — SampleAnimation is Editor-only for these clips).
     private void SetupPoseSource()
     {
         if (_poseSrc != null) { Destroy(_poseSrc); _poseSrc = null; }
@@ -2194,8 +2199,7 @@ public partial class LuauGameRunner : MonoBehaviour
         _poseSrc.transform.position = new Vector3(0f, -9000f, 0f);
         foreach (var r in _poseSrc.GetComponentsInChildren<Renderer>(true))
             r.enabled = false;
-        // Disable any Animator — we drive transforms directly via SampleAnimation each frame,
-        // which bypasses Animator timing, isLooping, and controller swap overhead entirely.
+        // Disable any Animator — PoseSampler re-enables the root one as the graph's only driver.
         foreach (var a in _poseSrc.GetComponentsInChildren<Animator>(true))
             a.enabled = false;
 
@@ -2247,14 +2251,15 @@ public partial class LuauGameRunner : MonoBehaviour
         // Choose animation based on player physics state.
         if (_playerInstance != null)
         {
-            var rb = _playerInstance.GetComponent<Rigidbody>();
-            if (rb != null)
+            var pc = _playerInstance.GetComponent<LuauPlayerController>();
+            if (pc != null)
             {
-                float vy     = rb.linearVelocity.y;
-                float hSpeed = new Vector2(rb.linearVelocity.x, rb.linearVelocity.z).magnitude;
-                // Roblox feel: enter air at ±0.5 m/s so animations switch quickly at
-                // peak height instead of briefly reverting to idle/walk.
-                bool  inAir  = vy > 0.5f || vy < -0.5f;
+                var   v      = pc.Velocity;
+                float vy     = v.y;
+                float hSpeed = new Vector2(v.x, v.z).magnitude;
+                // The motor's grounded flag is exact (sphere-swept floor), so
+                // animation follows it directly instead of guessing from vy.
+                bool  inAir  = !pc.IsGrounded;
 
                 string next;
                 if (inAir)
@@ -2276,8 +2281,7 @@ public partial class LuauGameRunner : MonoBehaviour
         }
 
         // Sample the current animation clip directly onto the pose-source transforms.
-        // SampleAnimation(go, time) writes bone transforms immediately with no Animator,
-        // no isLooping flag, no Play() queue delay — it just works.
+        // PoseSampler.Sample(clip, go, time) writes bone transforms immediately, on device too.
         if (_poseSrc != null && !string.IsNullOrEmpty(_currentAnimState)
             && _animClips.TryGetValue(_currentAnimState, out var activeClip))
         {
@@ -2285,7 +2289,7 @@ public partial class LuauGameRunner : MonoBehaviour
             _animPlayTime += Time.deltaTime / activeClip.length;
             if (loops) _animPlayTime %= 1f;
             else       _animPlayTime  = Mathf.Min(_animPlayTime, 1f);
-            activeClip.SampleAnimation(_poseSrc, _animPlayTime * activeClip.length);
+            PoseSampler.Sample(activeClip, _poseSrc, _animPlayTime * activeClip.length);
         }
 
         // Copy bone rotations from pose source to chibi skeleton.
@@ -2398,7 +2402,7 @@ public partial class LuauGameRunner : MonoBehaviour
         var pos = playerSpawn != null ? playerSpawn.position : new Vector3(0f, 3f, 0f);
         _playerInstance.transform.position = pos;
         var rb = _playerInstance.GetComponent<Rigidbody>();
-        if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+        if (rb != null && !rb.isKinematic) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
     }
 
     private void ToggleShiftLockGlobal()

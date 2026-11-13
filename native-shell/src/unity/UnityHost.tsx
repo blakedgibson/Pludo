@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import UnityView from '@azesmway/react-native-unity';
 import { GlassView } from 'expo-glass-effect';
 import { SymbolView } from 'expo-symbols';
@@ -10,6 +10,7 @@ import { useAuth } from '../auth';
 import { EditorChrome, type EditorCommand, type EditorState } from './EditorChrome';
 import { GameHud, type HudActions, type HudState } from './GameHud';
 import type { LogicCatalog } from './LogicEditor';
+import { ModelStudioChrome, type StudioPublished, type StudioState } from './ModelStudioChrome';
 
 // One Unity instance for the whole app. UnityView unloads the engine when it
 // unmounts, and iOS can't reliably start Unity again in the same process — so
@@ -19,11 +20,12 @@ import type { LogicCatalog } from './LogicEditor';
 //   avatar  — placed over a screen's avatar slot (profile card, customizer)
 //   game    — full screen; ReactUnity draws the in-game HUD inside it
 //   create  — full screen; ReactUnity's game creator (CreateScreen + editor)
+//   studio  — full screen; Model Studio (hand-built 3D models, ModelStudio.cs)
 //
 // Messages to Unity go to the "NativeShell" GameObject (NativeShellBridge.cs);
 // messages back arrive as JSON in onUnityMessage.
 
-export type UnityMode = 'hidden' | 'avatar' | 'game' | 'create';
+export type UnityMode = 'hidden' | 'avatar' | 'game' | 'create' | 'studio';
 
 /** Where the avatar view sits, in window coordinates. */
 export interface AvatarFrame {
@@ -54,6 +56,8 @@ interface UnityHostApi {
    *  'new' creates a blank game and opens it; a game opens that game. Leaving
    *  the editor comes back to the native app. */
   openCreator: (target: 'new' | CreatorGame) => void;
+  /** Open the Model Studio full screen (build a 3D model from parts, no AI). */
+  openStudio: () => void;
 }
 
 /** The shape CreateScreen's editor expects (its GameStub). */
@@ -82,6 +86,8 @@ export function UnityHost({ children }: { children: React.ReactNode }) {
   const [editorOverlay, setEditorOverlay] = useState(false);
   const [hudState, setHudState] = useState<HudState>({ active: false });
   const [logicCatalog, setLogicCatalog] = useState<LogicCatalog | null>(null);
+  const [studioState, setStudioState] = useState<StudioState>({ open: false });
+  const [studioPublished, setStudioPublished] = useState<StudioPublished | null>(null);
   const queue = useRef<[string, string][]>([]);
   const readyRef = useRef(false);
   const avatarOwner = useRef<string | null>(null);
@@ -93,6 +99,9 @@ export function UnityHost({ children }: { children: React.ReactNode }) {
   const fullScreenBusy = useRef(false);
   const { session } = useAuth();
   const insets = useSafeAreaInsets();
+  const { width: winW, height: winH } = useWindowDimensions();
+  // iPad / large screens: the lobby rotates freely (phones stay portrait).
+  const isTablet = Math.min(winW, winH) >= 600;
 
   const send = useCallback((method: string, arg = '') => {
     if (!readyRef.current) { queue.current.push([method, arg]); return; }
@@ -149,6 +158,12 @@ export function UnityHost({ children }: { children: React.ReactNode }) {
           send('ShowAvatar', JSON.stringify({ background: avatarFrameRef.current.background ?? AVATAR_BACKDROP }));
         } else setMode('hidden');
         break;
+      case 'studioState':
+        setStudioState(msg as StudioState);
+        break;
+      case 'studioPublished':
+        setStudioPublished({ ok: !!msg.ok, error: msg.error ?? undefined, name: msg.name ?? undefined, destination: msg.destination ?? undefined });
+        break;
       case 'headshot':
         if (msg.dataUri) setHeadshot(msg.dataUri);
         break;
@@ -160,9 +175,9 @@ export function UnityHost({ children }: { children: React.ReactNode }) {
   // Unity's own "back to portrait" request doesn't reach the host's scene, so
   // re-locking here is what actually brings the lobby upright again.
   useEffect(() => {
-    if (mode === 'game' || mode === 'create') ScreenOrientation.unlockAsync().catch(() => {});
+    if (mode === 'game' || mode === 'create' || mode === 'studio' || isTablet) ScreenOrientation.unlockAsync().catch(() => {});
     else ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP).catch(() => {});
-  }, [mode]);
+  }, [mode, isTablet]);
 
   // Pause Unity whenever it's parked, so the hidden engine costs no GPU/CPU.
   // The pause is delayed: Unity finishes leaving a game over the next few
@@ -204,7 +219,7 @@ export function UnityHost({ children }: { children: React.ReactNode }) {
     // A game or the editor is on screen: just remember who wants the avatar;
     // gameExited / creatorClosed shows it again for them.
     if (fullScreenBusy.current) return;
-    setMode(m => (m === 'game' || m === 'create' ? m : 'avatar'));
+    setMode(m => (m === 'game' || m === 'create' || m === 'studio' ? m : 'avatar'));
     // Re-frame in Unity when a new screen takes the avatar (its slot has a
     // different size); a re-measure of the same slot only moves the view.
     if (changedOwner) send('ShowAvatar', JSON.stringify({ background: frame.background ?? AVATAR_BACKDROP }));
@@ -228,6 +243,34 @@ export function UnityHost({ children }: { children: React.ReactNode }) {
 
   const editorCommand = useCallback((cmd: EditorCommand) => send('EditorCommand', cmd), [send]);
 
+  const openStudio = useCallback(() => {
+    fullScreenBusy.current = true;
+    setStudioPublished(null);
+    // Show the chrome right away; Unity's first studioState (part count, undo)
+    // lands a moment later once the engine unpauses and rotates.
+    setStudioState(s => ({ ...s, open: true }));
+    setMode('studio');
+    send('OpenModelStudio');
+  }, [send]);
+
+  const closeStudio = useCallback(() => {
+    send('CloseModelStudio');
+    setStudioState({ open: false });
+    fullScreenBusy.current = false;
+    if (avatarOwner.current) {
+      setMode('avatar');
+      send('ShowAvatar', JSON.stringify({ background: avatarFrameRef.current.background ?? AVATAR_BACKDROP }));
+    } else setMode('hidden');
+  }, [send]);
+
+  const studioCommand = useCallback((cmd: string) => send('StudioCommand', cmd), [send]);
+  const studioPublish = useCallback((req: { name: string; destination: string; category: string }) => {
+    setStudioPublished(null);
+    send('StudioCommand', `publish:${JSON.stringify({
+      ...req, creatorName: session?.username ?? 'Player', userId: session?.userId ?? '',
+    })}`);
+  }, [send, session]);
+
   // Native in-game HUD → Unity. Joystick moves are only sent when they change.
   const lastMove = useRef('');
   const hudActions = useMemo<HudActions>(() => ({
@@ -239,21 +282,22 @@ export function UnityHost({ children }: { children: React.ReactNode }) {
       send('SetMove', v);
     },
     jump: () => send('Jump'),
+    jumpRelease: () => send('JumpHold', '0'),
   }), [send]);
 
   const api = useMemo<UnityHostApi>(() => ({
-    ready, mode, headshot, playGame, showAvatar, hideAvatar, requestHeadshot, openCreator,
-  }), [ready, mode, headshot, playGame, showAvatar, hideAvatar, requestHeadshot, openCreator]);
+    ready, mode, headshot, playGame, showAvatar, hideAvatar, requestHeadshot, openCreator, openStudio,
+  }), [ready, mode, headshot, playGame, showAvatar, hideAvatar, requestHeadshot, openCreator, openStudio]);
 
   const frameStyle =
-    mode === 'game' || mode === 'create' ? StyleSheet.absoluteFill :
+    mode === 'game' || mode === 'create' || mode === 'studio' ? StyleSheet.absoluteFill :
     mode === 'avatar' ? {
       position: 'absolute' as const,
       left: avatarFrame.x, top: avatarFrame.y, width: avatarFrame.width, height: avatarFrame.height,
       borderRadius: avatarFrame.radius ?? 0,
       overflow: 'hidden' as const,   // clips Unity's native view to the rounded card
     } : { position: 'absolute' as const, left: 0, top: 0, width: 1, height: 1, opacity: 0 };
-  const unityTouches = mode === 'game' || mode === 'create' || (mode === 'avatar' && avatarFrame.interactive !== false);
+  const unityTouches = mode === 'game' || mode === 'create' || mode === 'studio' || (mode === 'avatar' && avatarFrame.interactive !== false);
 
   return (
     <Ctx.Provider value={api}>
@@ -265,6 +309,16 @@ export function UnityHost({ children }: { children: React.ReactNode }) {
           reach Unity). Hidden while play-testing — the game HUD takes over. */}
       {mode === 'create' && editorState.active && !editorOverlay && !editorState.overlay && (
         <EditorChrome state={editorState} onCommand={editorCommand} catalog={logicCatalog} />
+      )}
+      {mode === 'studio' && studioState.open && (
+        <ModelStudioChrome
+          state={studioState}
+          published={studioPublished}
+          onCommand={studioCommand}
+          onClose={closeStudio}
+          onPublish={studioPublish}
+          onDismissPublished={() => setStudioPublished(null)}
+        />
       )}
       {/* Native Liquid Glass in-game HUD (menu button, combined pause menu,
           joystick, jump) over the running game. */}

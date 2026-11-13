@@ -71,6 +71,15 @@ public class EditorCameraController : MonoBehaviour
 
     public bool SelectActive { get; private set; }
 
+    // True while React has put the editor into "click an object to assign it
+    // to a variable" mode (Custom Logic panel's Assign button). The camera
+    // keeps working normally; taps are routed to ProcessPickTap instead of
+    // the normal select/move path, and the previously-selected object's
+    // highlight is hidden for the duration so the full scene reads as
+    // unselected. See BeginPickObject / CancelPickObject.
+    public static bool PickMode { get; private set; }
+    private GameObject _pickPrevSelGo;
+
     // True while the user is actively touching the editor camera (any of:
     // one-finger drag, two-finger gesture, mouse drag, or snap-to-north
     // animation playing). React can read this to suppress unrelated UI
@@ -342,21 +351,32 @@ public class EditorCameraController : MonoBehaviour
         // while keeping a slight 3D tilt so the plate's thickness is still hinted.
         _pitch = 78f;
 
-        // Distance that frames the full plate: fit its bounding-sphere radius
-        // (half-diagonal) inside the camera's vertical FOV, so all four corners
+        // Fit-to-radius helper: distance that frames a bounding-sphere radius
+        // inside the camera's vertical FOV, so all four corners of that radius
         // stay visible regardless of yaw.
         float world  = TerrainBuilder.WorldSize;
         var   cam    = GetComponent<Camera>();
         float fovDeg = cam != null ? cam.fieldOfView : 60f;
-        float radius = world * 0.5f * 1.41421356f;
-        float fit    = radius / Mathf.Sin(fovDeg * 0.5f * Mathf.Deg2Rad);
+        float halfFovSin = Mathf.Sin(fovDeg * 0.5f * Mathf.Deg2Rad);
 
-        // Raise the zoom-out cap above the framing distance so the spring doesn't
-        // immediately pull the camera back in, and extend the far clip so the
-        // far edge of a large plate isn't culled.
-        DistMax = Mathf.Max(DistMaxDefault, fit * 1.3f);
-        _dist   = Mathf.Clamp(fit * 1.05f, DistMin, DistMax);
-        if (cam != null) cam.farClipPlane = Mathf.Max(cam.farClipPlane, _dist * 3f);
+        // Zoom-out cap and far-clip are sized off the FULL plate's half-diagonal
+        // so the user can still pull back far enough to see the whole thing.
+        float fullRadius = world * 0.5f * 1.41421356f;
+        float fullFit     = fullRadius / halfFovSin;
+        DistMax = Mathf.Max(DistMaxDefault, fullFit * 1.3f);
+        if (cam != null) cam.farClipPlane = Mathf.Max(cam.farClipPlane, fullFit * 1.3f * 3f);
+
+        // The OPENING distance, though, frames a comfortable close-in view
+        // rather than the entire (often huge) plate — fitting the full
+        // diagonal put a brand-new blank game's camera 700+ units away,
+        // reading as "floating in space" instead of standing near solid
+        // ground. Cap the framed radius at DistMaxDefault (the same zoom-out
+        // ceiling used once a spawn point exists) so the opening view starts
+        // in that same comfortable range; DistMax above still lets the user
+        // zoom out further to see the whole plate.
+        float closeRadius = Mathf.Min(fullRadius, DistMaxDefault);
+        float closeFit     = closeRadius / halfFovSin;
+        _dist = Mathf.Clamp(closeFit * 1.05f, DistMin, DistMax);
 
         SelectActive = false;
         KillVelocities();
@@ -705,6 +725,85 @@ public class EditorCameraController : MonoBehaviour
         EndMovingSel(deleteIfOverTrash: false);
     }
 
+    // Enters click-to-assign mode: hides the current selection's highlight
+    // (remembered so it can be restored) and starts routing taps to
+    // ProcessPickTap. The camera and every other gesture keep working
+    // normally — only the tap-release raycast branches differently.
+    public void BeginPickObject()
+    {
+        if (PickMode) return;
+        EndMovingSel(deleteIfOverTrash: false);
+        _pickPrevSelGo = _selGo;
+        ClearHighlight();
+        CancelPendingTap();
+        Notify("_editorPickResult", "");
+        PickMode = true;
+        SetPlayerVisibleForPick(true);
+    }
+
+    // X button — abandon picking and restore whatever was selected before.
+    public void CancelPickObject()
+    {
+        if (!PickMode) return;
+        EndPickMode();
+    }
+
+    private void EndPickMode()
+    {
+        PickMode = false;
+        if (_pickPrevSelGo != null) HighlightGo(_pickPrevSelGo);
+        _pickPrevSelGo = null;
+        SetPlayerVisibleForPick(false);
+    }
+
+    // SpawnPlayer disables every renderer on the avatar in editor preview —
+    // "the editor shows the world, not the avatar" — which normally makes
+    // sense, but it means there is nothing on screen for the creator to tap
+    // when Assign is targeting the player. Reveal it for the duration of a
+    // pick and hide it again the moment picking ends (success or cancel) so
+    // normal editing is unaffected.
+    private static void SetPlayerVisibleForPick(bool visible)
+    {
+        var runner = LuauGameRunner.Instance;
+        if (runner == null || !runner.IsPreviewMode) return;
+        var player = runner.PlayerInstance;
+        if (player == null) return;
+        foreach (var r in player.GetComponentsInChildren<Renderer>(true))
+            r.enabled = visible;
+    }
+
+    // Tap-release handler used instead of ProcessSelectTap while PickMode is
+    // active. A hit on a real (non-terrain) object reports its name and ends
+    // picking; a miss or a terrain/ground hit is ignored so the user can
+    // keep looking — only the X button cancels.
+    private void ProcessPickTap()
+    {
+        bool tapped = false;
+        if (Input.touchCount == 1 && Input.GetTouch(0).phase == TouchPhase.Ended && _tapDown)
+            tapped = true;
+        else if (Input.touchCount == 0 && Input.GetMouseButtonUp(0) && _tapDown)
+            tapped = true;
+
+        if (!tapped) return;
+        _tapDown = false;
+        if (_tapBeganOverUI) { _tapBeganOverUI = false; return; }
+
+        var cam = Camera.main;
+        if (!cam) return;
+        var ray = cam.ScreenPointToRay(_tapScreenPos);
+        if (!Physics.Raycast(ray, out var hit, 500f)) return;
+
+        var go = hit.collider.gameObject;
+        if (go.name == "_Trigger" && go.transform.parent)
+            go = go.transform.parent.gameObject;
+        if (IsTerrainOrGround(go)) return;
+
+        go = ResolveTrackedRoot(go);
+        string pickedName = go.name;
+        EndPickMode();
+        Notify("_editorPickResult", pickedName);
+    }
+
     // Programmatic selection — called by LuauGameRunner immediately after
     // PlaceEditorAsset so the freshly-dropped model is selected without the
     // user having to tap it. Forces SelectActive on as a side effect.
@@ -793,7 +892,8 @@ public class EditorCameraController : MonoBehaviour
         // motion source allowed to write _pivot while the panel is open.
         ApplyFraming();
 
-        if (SelectActive) ProcessSelectTap();
+        if (PickMode) ProcessPickTap();
+        else if (SelectActive) ProcessSelectTap();
         ApplyScaleSpring();
         ApplyCamera();
         PublishSelectionBounds();

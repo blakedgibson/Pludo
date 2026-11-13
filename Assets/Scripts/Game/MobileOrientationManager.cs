@@ -42,6 +42,29 @@ public class MobileOrientationManager : MonoBehaviour
     //     My Games tile and openGame re-enters in the same frame.
     private int  _enterGeneration;
 
+    // True from the moment a game/editor session asks for landscape until it
+    // exits — i.e. "landscape has been REQUESTED", which is not the same as
+    // "the OS has finished rotating". GameLauncher pairs this with the live
+    // screen dimensions to expose getLandscapeReady() to React, so the editor
+    // chrome can hold itself back during the rotation window instead of laying
+    // landscape UI out on a still-portrait canvas.
+    public bool IsGameOrientationLocked => _orientationLocked;
+
+    // Tablets are landscape on EVERY surface — lobby tabs included — because the
+    // iPad tab layouts (left nav rail, avatar split view) are built for a wide
+    // canvas. Phones keep the original split: portrait lobby, landscape only
+    // for game/editor sessions.
+    //
+    // Consequence worth knowing: on tablet the canvas reference resolution never
+    // changes, so entering/leaving a game is a pure no-op for orientation and
+    // the rotation-gate window (getLandscapeReady) is already satisfied on the
+    // first frame.
+    private static bool LandscapeEverywhere => DeviceIdiom.IsTablet;
+
+    // "Landscape is the correct orientation right now", whether that's because a
+    // game session asked for it or because we're on a tablet.
+    private bool WantsLandscape => _orientationLocked || LandscapeEverywhere;
+
 #if UNITY_IOS && !UNITY_EDITOR
     [DllImport("__Internal")] private static extern void PludoOrientation_ForceLandscape();
 #endif
@@ -60,9 +83,9 @@ public class MobileOrientationManager : MonoBehaviour
         if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
         DontDestroyOnLoad(gameObject);
-        // Tab screens (lobby) must be portrait. Apply the lock immediately so the
-        // app boots in portrait even before any game launch flow runs.
-        LockToPortrait();
+        // Pin the lobby orientation immediately so the app boots the right way up
+        // (portrait on phone, landscape on tablet) before any launch flow runs.
+        LockToLobbyOrientation();
     }
 
     // While locked to landscape, re-force if the OS slips back to portrait.
@@ -76,7 +99,10 @@ public class MobileOrientationManager : MonoBehaviour
     //      enum check misses this — the only reliable signal is screen dims.
     private void Update()
     {
-        if (!_orientationLocked) return;
+        // Tablets re-assert in the lobby too, not just during game sessions —
+        // the OS can still hand us a portrait frame on a cold start or after a
+        // task-switch, and the tab layouts have no portrait fallback.
+        if (!WantsLandscape) return;
         var o = Screen.orientation;
         bool orientationPortrait = o == ScreenOrientation.Portrait || o == ScreenOrientation.PortraitUpsideDown;
         bool visuallyPortrait    = Screen.height > Screen.width;
@@ -167,16 +193,36 @@ public class MobileOrientationManager : MonoBehaviour
             yield break;
         }
         Debug.Log($"[MobileOrientationManager] ExitGameOrientation committing (gen {snapshot}, locked was {_orientationLocked})");
-        LockToPortrait();
-        ApplyCanvasReference(landscape: false);
+        LockToLobbyOrientation();
+        // Tablet lobby is landscape, so the canvas reference must NOT flip back
+        // to portrait units here — doing so would relayout every tab screen into
+        // a 390-wide space while the screen stays 1366 wide.
+        ApplyCanvasReference(landscape: LandscapeEverywhere);
     }
 
-    // Enables only portrait in the supported-orientations mask and pins the
-    // current orientation to Portrait. Used at app boot (Awake) and after every
-    // game session ends.
-    private void LockToPortrait()
+    // Pins the orientation the lobby tabs run in and clears the game-session
+    // lock. Used at app boot (Awake) and after every game session ends.
+    //
+    // Tablet stays landscape here — the tab screens are built for a wide canvas,
+    // so "returning to the lobby" is orientation-neutral on iPad. Only the
+    // _orientationLocked flag drops, which is what getLandscapeReady reports.
+    private void LockToLobbyOrientation()
     {
         _orientationLocked = false;
+
+        if (LandscapeEverywhere)
+        {
+            Screen.autorotateToLandscapeLeft      = true;
+            Screen.autorotateToLandscapeRight     = true;
+            Screen.autorotateToPortrait           = false;
+            Screen.autorotateToPortraitUpsideDown = false;
+#if UNITY_IOS && !UNITY_EDITOR
+            PludoOrientation_ForceLandscape();
+#endif
+            Screen.orientation = ScreenOrientation.LandscapeLeft;
+            return;
+        }
+
         Screen.autorotateToPortrait           = true;
         Screen.autorotateToPortraitUpsideDown = false;
         Screen.autorotateToLandscapeLeft      = false;

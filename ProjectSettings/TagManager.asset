@@ -2,8 +2,41 @@
 %TAG !u! tag:unity3d.com,2011:
 --- !u!78 &1
 TagManager:
-  serializedVersion: 2
-  tags: []
+  serializedVersion: 3
+  tags:
+  - enemy
+  - chest
+  - portal
+  - coin
+  - key
+  - trap
+  - platform
+  - trigger
+  - powerup
+  - door
+  - npc
+  - item
+  - ground
+  - obstacle
+  - pickup
+  - collectible
+  - hazard
+  - goal
+  - checkpoint
+  - loot
+  - boss
+  - projectile
+  - wall
+  - floor
+  - ceiling
+  - water
+  - fire
+  - ice
+  - toxic
+  - switch
+  - lever
+  - button
+  - zone
   layers:
   - Default
   - TransparentFX
@@ -13,7 +46,7 @@ TagManager:
   - UI
   - 
   - 
-  - 
+  - AvatarPreview
   - 
   - 
   - 
@@ -50,27 +83,4 @@ TagManager:
   - Light Layer 5
   - Light Layer 6
   - Light Layer 7
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
-  - 
+  m_MigratedRenderPipelines: []

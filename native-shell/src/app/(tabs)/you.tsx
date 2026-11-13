@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActionSheetIOS, ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActionSheetIOS, ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -30,6 +30,11 @@ function Profile() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { session, getAccessToken, signOut } = useAuth();
+  // iPad landscape / large windows: avatar on the left, games on the right
+  // (the full-width card would be taller than the screen).
+  const { width: winW } = useWindowDimensions();
+  const wide = winW >= 900;
+  const leftW = wide ? Math.min(winW * 0.46, 560) : undefined;
   const unity = useUnity();
   // Live Unity chibi inside the card. Not interactive: taps fall through to the
   // card, which opens the customizer (where the avatar can be spun).
@@ -73,6 +78,8 @@ function Profile() {
         <HeaderButton sf="line.3.horizontal" label="Menu" onPress={openMenu} />
       </View>
 
+      <View style={wide ? styles.split : undefined}>
+      <View style={wide ? { width: leftW } : undefined}>
       {/* Avatar card — tap to customize. */}
       <Pressable
         onPress={() => router.push('/avatar')}
@@ -100,7 +107,9 @@ function Profile() {
         </View>
       </View>
 
-      <Text style={styles.section}>Games</Text>
+      </View>
+      <View style={wide ? { flex: 1 } : undefined}>
+      <Text style={[styles.section, wide && { marginTop: 0 }]}>Games</Text>
       {games === null && !error ? (
         <ActivityIndicator color="#fff" style={{ marginTop: 24 }} />
       ) : error ? (
@@ -131,12 +140,15 @@ function Profile() {
           )}
         />
       )}
+      </View>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: '#000' },
+  split: { flexDirection: 'row', gap: 8, flex: 1 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, marginBottom: 12 },
   card: {
     marginHorizontal: 20,

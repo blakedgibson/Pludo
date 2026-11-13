@@ -9,6 +9,7 @@ import {
   formatCount, formatTimeAgo,
   GameComment,
 } from '../api';
+import { GlassButton } from '../components/GlassButton';
 
 // Material Symbols Rounded glyph names by genre — rendered through ReactUnity's
 // <icon set="material-rounded"> element (same mechanism as the bottom nav).
@@ -259,22 +260,22 @@ export function GamePreviewScreen({ game, onClose, onPlay }: Props) {
                 borderWidth: 0, paddingTop: 8, paddingBottom: 8,
               } as any}
             />
-            <button
+            <GlassButton
               onClick={handlePostComment}
               style={{
-                backgroundColor: commentDraft.trim() ? C.green : C.surface,
+                backgroundColor: commentDraft.trim() ? C.primary : C.surface,
                 borderRadius: 10, borderWidth: 0,
                 paddingLeft: 14, paddingRight: 14, paddingTop: 8, paddingBottom: 8,
               }}
             >
               <text style={{
                 fontSize: 13,
-                color: commentDraft.trim() ? C.bg : C.secondary,
+                color: commentDraft.trim() ? C.onPrimary : C.secondary,
                 fontWeight: 'bold',
               }}>
                 {posting ? '...' : 'Post'}
               </text>
-            </button>
+            </GlassButton>
           </view>
 
           {loading ? (
@@ -300,14 +301,14 @@ export function GamePreviewScreen({ game, onClose, onPlay }: Props) {
       </scroll>
 
       {/* ── Persistent close button — top-left, always reachable ──────────── */}
-      <button onClick={onClose} style={{
+      <GlassButton onClick={onClose} style={{
         position: 'absolute', top: safeAreaTop() + 10, left: 12,
         width: 36, height: 36, borderRadius: 18,
         backgroundColor: 'rgba(0,0,0,0.55)',
         borderWidth: 0, alignItems: 'center', justifyContent: 'center',
       }}>
         <icon set="material-rounded" style={{ fontSize: 22, color: '#fff', lineHeight: 22 }}>close</icon>
-      </button>
+      </GlassButton>
 
       {/* ── Sticky bottom Play bar — full-width primary action ─────────────
           BottomNav is hidden while a preview is open, so this bar sits at the
@@ -320,16 +321,16 @@ export function GamePreviewScreen({ game, onClose, onPlay }: Props) {
         backgroundColor: C.bg,
         borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.06)',
       }}>
-        <button onClick={handlePlay} style={{
+        <GlassButton onClick={handlePlay} style={{
           width: '100%',
-          backgroundColor: C.green, borderRadius: 16, borderWidth: 0,
+          backgroundColor: C.primary, borderRadius: 16, borderWidth: 0,
           paddingTop: 16, paddingBottom: 16,
           alignItems: 'center', justifyContent: 'center',
           flexDirection: 'row', gap: 6,
         }}>
-          <icon set="material-rounded-filled" style={{ fontSize: 20, color: C.bg, lineHeight: 20 }}>play_arrow</icon>
-          <text style={{ fontSize: 17, color: C.bg, fontWeight: 'bold' }}>Play</text>
-        </button>
+          <icon set="material-rounded-filled" style={{ fontSize: 20, color: C.onPrimary, lineHeight: 20 }}>play_arrow</icon>
+          <text style={{ fontSize: 17, color: C.onPrimary, fontWeight: 'bold' }}>Play</text>
+        </GlassButton>
       </view>
     </view>
   );

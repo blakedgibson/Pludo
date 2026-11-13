@@ -43,10 +43,10 @@ export function ItemCard({ item, compact = false, onClick }: Props) {
   return (
     <Pressable onClick={onClick} style={{
       width: CARD_WIDTH_PCT,
-      backgroundColor: item.equipped ? 'rgba(48,209,88,0.08)' : C.card,
+      backgroundColor: item.equipped ? C.primaryTint : C.card,
       borderRadius: 18,
       borderWidth: 1,
-      borderColor: item.equipped ? 'rgba(48,209,88,0.6)' : C.border,
+      borderColor: item.equipped ? C.primaryBorder : C.border,
       marginBottom: 10,
       overflow: 'hidden',
       alignItems: 'stretch',
@@ -67,7 +67,7 @@ export function ItemCard({ item, compact = false, onClick }: Props) {
         <text style={{ fontSize: 12, color: C.secondary }}>{item.category}</text>
         <view style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4 }}>
           <text style={{ fontSize: 11, color: rarityColor, fontWeight: 'bold' }}>{item.rarity}</text>
-          <text style={{ fontSize: 11, color: C.green, fontWeight: 'bold' }}>
+          <text style={{ fontSize: 11, color: C.primary, fontWeight: 'bold' }}>
             {item.price > 0 ? `${item.price} G` : 'Free'}
           </text>
         </view>

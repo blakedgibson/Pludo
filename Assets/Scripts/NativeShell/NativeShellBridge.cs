@@ -204,6 +204,19 @@ public class NativeShellBridge : MonoBehaviour
         _hostRoute = "create";
     }
 
+    // ── Model Studio (hand-built 3D models, no AI) ───────────────────────────
+    public void OpenModelStudio(string arg)
+    {
+        AvatarPreviewController.Instance?.SetVisible(false);
+        RestoreBackdrop();
+        ModelStudio.Ensure().Open();
+    }
+
+    public void CloseModelStudio(string arg) => ModelStudio.Instance?.Close();
+
+    // "add:block" · "tool:move" · "set:{json}" · "publish:{json}" …
+    public void StudioCommand(string cmd) => ModelStudio.Instance?.Command(cmd);
+
     // Native editor toolbar → ReactUnity editor: play / tools / publish / leave / undo / redo.
     public void EditorCommand(string cmd)
     {
@@ -229,7 +242,9 @@ public class NativeShellBridge : MonoBehaviour
     }
 
     // Native jump button.
-    public void Jump(string arg) => MobileGameInput.HostJump();
+    public void Jump(string arg) { MobileGameInput.HostJump(); MobileGameInput.SetHostJumpHeld(true); }
+    // Native jump button released ("0") — ends hold-to-keep-jumping.
+    public void JumpHold(string arg) => MobileGameInput.SetHostJumpHeld(arg == "1");
 
     public void ExitGame(string arg)
     {

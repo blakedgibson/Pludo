@@ -15,6 +15,18 @@ using Newtonsoft.Json;
 //   var go = loader.Spawn("dragon", parent);          // instantiate a loaded model
 public class GameAssetLoader : MonoBehaviour
 {
+    // Sentinel cache-key for the "player spawn" tray item (EditorScreen's bottom
+    // strip, react/src/App.tsx PLAYER_SPAWN_ASSET). Bypasses the GLB download /
+    // template-clone pipeline entirely — Spawn() builds the visual procedurally
+    // from the same Avatar/* body-part FBXs the "You" tab avatar editor and the
+    // in-game player use (GameRenderClient.BuildChibiVisual), tinted and dressed
+    // with the current user's AvatarStateManager config, so the marker always
+    // matches their actual customized avatar. Must match the identical literal
+    // in react/src/App.tsx (PLAYER_SPAWN_ASSET.cacheKey) and api-server/src/
+    // room-manager.ts (PLAYER_SPAWN_MARKER_CACHE_KEY) — three independent
+    // runtimes agreeing on one string, no shared constant to import across them.
+    public const string SpawnMarkerCacheKey = "__player_spawn__";
+
     // Root → list of top-level GOs produced by GLTFast instantiation for that asset id.
     private readonly Dictionary<string, List<GameObject>> _templates = new();
     private readonly Dictionary<string, bool> _humanoid = new();
@@ -129,6 +141,7 @@ public class GameAssetLoader : MonoBehaviour
     // sizeHint: real-world target size in meters (0 = use default 1.5m).
     public IEnumerator EnsureLoaded(string id, string url, bool isHumanoid, float sizeHint = 0f)
     {
+        if (id == SpawnMarkerCacheKey) yield break; // no network asset — built procedurally in Spawn()
         if (_templates.ContainsKey(id)) yield break;
         _humanoid[id] = isHumanoid;
         if (sizeHint > 0f) _sizeHints[id] = sizeHint;
@@ -144,6 +157,8 @@ public class GameAssetLoader : MonoBehaviour
     // Instantiate a previously loaded model. Returns null if the model wasn't loaded.
     public GameObject Spawn(string id, Transform parent)
     {
+        if (id == SpawnMarkerCacheKey) return SpawnPlayerSpawnMarker(parent);
+
         if (!_templates.TryGetValue(id, out var roots) || roots.Count == 0)
         {
             Debug.LogWarning($"[GameAssetLoader] Asset '{id}' not loaded — using capsule fallback");
@@ -177,6 +192,107 @@ public class GameAssetLoader : MonoBehaviour
             TryAttachAnimator(container);
 
         return container;
+    }
+
+    // Builds the "player spawn" marker: the exact same procedural chibi visual
+    // (body parts + skin tint + equipped items) as the "You" tab avatar editor
+    // and the in-game player, so it visibly represents where that player will
+    // appear. Reuses GameRenderClient.BuildChibiVisual (pure mesh assembly) and
+    // LuauGameRunner.AttachAvatarItemsCoroutine (equipped hats/clothes/etc.) —
+    // both already public/static for exactly this kind of reuse.
+    private GameObject SpawnPlayerSpawnMarker(Transform parent)
+    {
+        Color bodyCol = new Color(0.83f, 0.64f, 0.51f); // default tan, mirrors GameRenderClient/LuauGameRunner
+        var mgr = AvatarStateManager.Instance;
+        if (mgr != null && mgr.Avatar != null && !string.IsNullOrEmpty(mgr.Avatar.bodyColor))
+            ColorUtility.TryParseHtmlString(mgr.Avatar.bodyColor, out bodyCol);
+
+        var container = new GameObject($"Model_{SpawnMarkerCacheKey}");
+        container.transform.SetParent(parent, false);
+
+        var visual = GameRenderClient.BuildChibiVisual(container.transform, bodyCol, out var bones);
+        if (visual == null)
+        {
+            Debug.LogWarning("[GameAssetLoader] SpawnPlayerSpawnMarker: no avatar assets available — spawning empty marker.");
+        }
+        else
+        {
+            StartCoroutine(LuauGameRunner.AttachAvatarItemsCoroutine(bones));
+            StartCoroutine(ScaleSpawnMarkerCoroutine(container, visual.transform));
+        }
+
+        // Tag it like any other Meshy-sourced spawn so the generic terrain-snap /
+        // rotation-pipeline code that keys off MeshyAssetMarker keeps working.
+        var marker = container.AddComponent<MeshyAssetMarker>();
+        marker.AssetId       = SpawnMarkerCacheKey;
+        marker.IsTerrain     = false;
+        marker.YawCorrection = 0f;
+
+        return container;
+    }
+
+    // The chibi's SkinnedMeshRenderer bounds are zero until the first skinning
+    // pass — wait a few frames (mirrors LuauGameRunner.DeferredAvatarScale),
+    // then scale to the same 2 m target height used for every other humanoid,
+    // and re-snap to terrain since scaling shifts where the feet land.
+    private IEnumerator ScaleSpawnMarkerCoroutine(GameObject container, Transform visual)
+    {
+        const float TargetHeight = 2f;
+        float minY = float.MaxValue, maxY = float.MinValue;
+        for (int attempt = 0; attempt < 5 && visual != null; attempt++)
+        {
+            yield return new WaitForEndOfFrame();
+            minY = float.MaxValue; maxY = float.MinValue;
+            foreach (var r in visual.GetComponentsInChildren<Renderer>())
+            {
+                if (!r.enabled) continue;
+                minY = Mathf.Min(minY, r.bounds.min.y);
+                maxY = Mathf.Max(maxY, r.bounds.max.y);
+            }
+            if (maxY > minY) break;
+        }
+        if (visual == null || container == null || maxY <= minY) yield break;
+
+        float h = maxY - minY;
+        if (h < 0.001f) yield break;
+        visual.localScale = Vector3.one * (TargetHeight / h);
+        SnapToTerrainIfBelow(container);
+        AddSelectionTrigger(container, visual);
+    }
+
+    // The chibi visual has no colliders anywhere — GameRenderClient.BuildChibiVisual
+    // strips them (correct for the real player avatar too, which drives movement off
+    // a separate capsule elsewhere), so EditorCameraController's tap-to-select and
+    // tap-to-re-grab raycasts pass straight through it. Without this the marker could
+    // only be placed and dragged once (the initial drag-to-place doesn't raycast —
+    // BeginMoveSelected takes over the gesture programmatically) but never reselected
+    // afterward, unlike every other placed asset. A TRIGGER collider (not solid) fixes
+    // that without becoming a physical obstacle the real player could get stuck on
+    // when they spawn at this exact position. Mirrors the bounds→local-size synthesis
+    // LuauUnityApi.EnsurePhysicsReady already uses for collider-less GLB props.
+    private static void AddSelectionTrigger(GameObject container, Transform visual)
+    {
+        if (container == null || visual == null) return;
+        var rends = visual.GetComponentsInChildren<Renderer>();
+        if (rends.Length == 0) return;
+
+        Bounds b = rends[0].bounds;
+        foreach (var r in rends) b.Encapsulate(r.bounds);
+
+        // NOTE: intentionally NOT `GetComponent<BoxCollider>() ?? AddComponent<BoxCollider>()`.
+        // Unity's GetComponent returns a "fake-null" wrapper when nothing is found, and C#'s ??
+        // checks raw reference nullity rather than UnityEngine.Object's overloaded ==, so it
+        // picks that fake-null left side and never calls AddComponent at all — the collider is
+        // silently never created, and the next line throws MissingComponentException.
+        var bc = container.GetComponent<BoxCollider>();
+        if (bc == null) bc = container.AddComponent<BoxCollider>();
+        bc.isTrigger = true;
+        bc.center = container.transform.InverseTransformPoint(b.center);
+        var s = container.transform.lossyScale;
+        bc.size = new Vector3(
+            Mathf.Abs(s.x) > 0.001f ? b.size.x / Mathf.Abs(s.x) : b.size.x,
+            Mathf.Abs(s.y) > 0.001f ? b.size.y / Mathf.Abs(s.y) : b.size.y,
+            Mathf.Abs(s.z) > 0.001f ? b.size.z / Mathf.Abs(s.z) : b.size.z);
     }
 
     // ── Terrain snap helper ────────────────────────────────────────────────────

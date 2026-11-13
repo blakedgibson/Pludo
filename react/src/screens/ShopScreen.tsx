@@ -3,6 +3,10 @@ import { C } from '../theme';
 import { isTablet } from '../responsive';
 import { AvatarItemData, AssetItem } from '../types';
 import { fetchAssets } from '../api';
+import { safeAreaTop, safeAreaBottom } from '../safeArea';
+import { Skeleton } from '../components/Skeleton';
+import { GlassButton } from '../components/GlassButton';
+import { glass } from '../glass';
 
 // Portrait canvas gets bonus width on tablet (see responsive.ts / the
 // per-idiom matchWidthOrHeight blend in MobileOrientationManager.cs) — more
@@ -14,6 +18,10 @@ type ForgePhase = 'catalog' | 'prompt' | 'forging' | 'done';
 
 interface Props {
   onBack: () => void;
+  // True when rendered inside the editor's centered overlay card, which is
+  // already inset from the screen edges — the header must not add the notch
+  // inset a second time.
+  embedded?: boolean;
   // When provided, the picker shows the bottom Apply bar and emits the selected
   // assets. Forwards from App.tsx → CreateScreen so the editor's bottom strip
   // can list the chosen models.
@@ -54,7 +62,7 @@ function Dots() {
         <icon
           key={i}
           set={i < dot ? 'material-rounded-filled' : 'material-rounded'}
-          style={{ fontSize: 12, color: C.green, lineHeight: 12 }}
+          style={{ fontSize: 12, color: C.primary, lineHeight: 12 }}
         >circle</icon>
       ))}
     </view>
@@ -98,12 +106,12 @@ const AssetTile = React.memo(function AssetTile({ asset, selected, onPress, size
   const hasThumb = !!asset.thumbnailUrl;
   const dim: any = (size && size > 0) ? { width: size, height: size } : { width: '100%', height: '100%' };
   return (
-    <button onClick={() => onPress(asset)} style={{
+    <GlassButton onClick={() => onPress(asset)} style={{
       ...dim,
       borderRadius: 0,
       backgroundColor: hasThumb ? '#1a1a1a' : tileColor(asset.cacheKey),
       borderWidth: selected ? 3 : 0,
-      borderColor: selected ? C.green : 'rgba(0,0,0,0)',
+      borderColor: selected ? C.primary : 'rgba(0,0,0,0)',
       alignItems: 'center', justifyContent: 'center',
       padding: 0,
       position: 'relative',
@@ -123,38 +131,39 @@ const AssetTile = React.memo(function AssetTile({ asset, selected, onPress, size
         <view style={{
           position: 'absolute', top: 4, right: 4,
           width: 20, height: 20, borderRadius: 10,
-          backgroundColor: C.green,
+          backgroundColor: C.primary,
           alignItems: 'center', justifyContent: 'center',
           borderWidth: 2, borderColor: C.bg,
         }}>
-          <icon set="material-rounded-filled" style={{ fontSize: 12, color: C.bg, lineHeight: 12 }}>check</icon>
+          <icon set="material-rounded-filled" style={{ fontSize: 12, color: C.onPrimary, lineHeight: 12 }}>check</icon>
         </view>
       ) : null}
-    </button>
+    </GlassButton>
   );
 });
 
 // ── Forge prompt screen (unchanged from previous version) ────────────────────
 
-function ForgePromptScreen({ onBack, onForge }: {
+function ForgePromptScreen({ onBack, onForge, headerTop }: {
   onBack: () => void;
   onForge: (prompt: string) => void;
+  headerTop: number;
 }) {
   const [prompt, setPrompt] = useState('');
 
   return (
     <view style={{ flex: 1, backgroundColor: C.bg, flexDirection: 'column' }}>
-      <view style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 20, paddingTop: 16, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.border, gap: 12 }}>
-        <button onClick={onBack} style={{ backgroundColor: 'rgba(0,0,0,0.002)', borderWidth: 0, padding: 4 }}>
-          <icon set="material-rounded" style={{ fontSize: 24, color: C.green, lineHeight: 24 }}>arrow_back</icon>
-        </button>
+      <view style={{ flexDirection: 'row', alignItems: 'center', paddingLeft: 16, paddingRight: 20, paddingTop: headerTop + 4, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: C.border, gap: 12 }}>
+        <GlassButton onClick={onBack} style={{ backgroundColor: 'rgba(0,0,0,0.002)', borderWidth: 0, padding: 4 }}>
+          <icon set="material-rounded" style={{ fontSize: 24, color: C.text, lineHeight: 24 }}>arrow_back</icon>
+        </GlassButton>
         <text style={{ fontSize: 24, color: C.text, fontWeight: 'bold', flex: 1 }}>Forge Asset</text>
       </view>
 
       <view style={{ flex: 1, paddingLeft: 20, paddingRight: 20, paddingTop: 24 }}>
         <view style={{ alignItems: 'center', marginBottom: 28 }}>
-          <view style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: 'rgba(48,209,88,0.12)', alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 2, borderColor: C.green }}>
-            <icon set="material-rounded" style={{ fontSize: 32, color: C.green, lineHeight: 32 }}>auto_awesome</icon>
+          <view style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: C.primaryTint, alignItems: 'center', justifyContent: 'center', marginBottom: 12, borderWidth: 2, borderColor: C.primary }}>
+            <icon set="material-rounded" style={{ fontSize: 32, color: C.primary, lineHeight: 32 }}>auto_awesome</icon>
           </view>
           <text style={{ fontSize: 18, color: C.text, fontWeight: 'bold', textAlign: 'center', marginBottom: 6 }}>
             Forge a new 3D asset
@@ -176,17 +185,17 @@ function ForgePromptScreen({ onBack, onForge }: {
               minHeight: 120,
             }}
           />
-          <button onClick={() => { if (prompt.trim()) onForge(prompt.trim()); }} style={{
+          <GlassButton onClick={() => { if (prompt.trim()) onForge(prompt.trim()); }} style={{
             position: 'absolute', bottom: 12, right: 12,
             height: 44, borderRadius: 12,
-            backgroundColor: prompt.trim() ? C.green : C.surface, borderWidth: 0,
+            backgroundColor: prompt.trim() ? C.primary : C.surface, borderWidth: 0,
             alignItems: 'center', justifyContent: 'center',
             paddingLeft: 20, paddingRight: 20,
           }}>
-            <text style={{ fontSize: 14, color: prompt.trim() ? C.bg : C.secondary, fontWeight: 'bold' }}>
+            <text style={{ fontSize: 14, color: prompt.trim() ? C.onPrimary : C.secondary, fontWeight: 'bold' }}>
               Forge
             </text>
-          </button>
+          </GlassButton>
         </view>
       </view>
     </view>
@@ -255,14 +264,14 @@ function ForgingScreen({ jobId, promptLabel, onDone, onError }: {
       </text>
       <view style={{ width: '80%', height: 4, backgroundColor: C.card, borderRadius: 2, overflow: 'hidden', marginBottom: 28 }}>
         <view style={{
-          height: '100%', backgroundColor: C.green, borderRadius: 2,
+          height: '100%', backgroundColor: C.primary, borderRadius: 2,
           width: `${Math.round(((stepIdx + 1) / FORGE_STEPS.length) * 100)}%`,
         }} />
       </view>
       {promptLabel ? (
         <view style={{ backgroundColor: C.card, borderRadius: 14, paddingLeft: 20, paddingRight: 20, paddingTop: 12, paddingBottom: 12, borderWidth: 1, borderColor: C.border }}>
           <text style={{ fontSize: 13, color: C.secondary, textAlign: 'center' }}>
-            Forging <text style={{ color: C.green, fontWeight: 'bold' }}>"{promptLabel}"</text>
+            Forging <text style={{ color: C.primary, fontWeight: 'bold' }}>"{promptLabel}"</text>
           </text>
         </view>
       ) : null}
@@ -272,7 +281,9 @@ function ForgingScreen({ jobId, promptLabel, onDone, onError }: {
 
 // ── Assets picker (catalog) ──────────────────────────────────────────────────
 
-export function ShopScreen({ onBack, onApply }: Props) {
+export function ShopScreen({ onBack, onApply, embedded = false }: Props) {
+  const headerTop    = embedded ? 12 : safeAreaTop() + 8;
+  const applyBarPad  = embedded ? 12 : 12 + safeAreaBottom();
   const [assets,       setAssets]       = useState<AssetItem[]>([]);
   const [search,       setSearch]       = useState('');
   const [selected,     setSelected]     = useState<Map<string, AssetItem>>(new Map());
@@ -365,6 +376,7 @@ export function ShopScreen({ onBack, onApply }: Props) {
       <ForgePromptScreen
         onBack={() => { setForgePhase('catalog'); setForgeError(''); }}
         onForge={startForge}
+        headerTop={headerTop}
       />
     );
   }
@@ -390,13 +402,13 @@ export function ShopScreen({ onBack, onApply }: Props) {
           header's bottom border. */}
       <view style={{
         flexDirection: 'row', alignItems: 'center',
-        paddingLeft: 12, paddingRight: 12, paddingTop: 12, paddingBottom: 12,
+        paddingLeft: 12, paddingRight: 12, paddingTop: headerTop, paddingBottom: 12,
         borderBottomWidth: 1, borderBottomColor: C.border,
         gap: 10,
       }}>
-        <button onClick={onBack} style={{ backgroundColor: 'rgba(0,0,0,0.002)', borderWidth: 0, padding: 4, flexShrink: 0 }}>
-          <icon set="material-rounded" style={{ fontSize: 24, color: C.green, lineHeight: 24 }}>arrow_back</icon>
-        </button>
+        <GlassButton onClick={onBack} style={{ backgroundColor: 'rgba(0,0,0,0.002)', borderWidth: 0, padding: 4, flexShrink: 0 }}>
+          <icon set="material-rounded" style={{ fontSize: 24, color: C.text, lineHeight: 24 }}>arrow_back</icon>
+        </GlassButton>
 
         <view style={{
           flex: 1,
@@ -419,23 +431,23 @@ export function ShopScreen({ onBack, onApply }: Props) {
             }}
           />
           {search ? (
-            <button onClick={() => setSearch('')} style={{
+            <GlassButton onClick={() => setSearch('')} style={{
               backgroundColor: 'rgba(0,0,0,0.002)', borderWidth: 0, padding: 4,
             }}>
               <icon set="material-rounded" style={{ fontSize: 16, color: C.secondary, lineHeight: 16 }}>close</icon>
-            </button>
+            </GlassButton>
           ) : null}
         </view>
 
-        <button onClick={() => setForgePhase('prompt')} style={{
-          backgroundColor: C.green, borderRadius: 10, borderWidth: 0,
+        <GlassButton onClick={() => setForgePhase('prompt')} style={{
+          backgroundColor: C.primary, borderRadius: 10, borderWidth: 0,
           paddingLeft: 14, paddingRight: 14, paddingTop: 8, paddingBottom: 8,
           flexDirection: 'row', alignItems: 'center', gap: 4,
           flexShrink: 0,
         }}>
-          <icon set="material-rounded" style={{ fontSize: 14, color: C.bg, lineHeight: 14 }}>add</icon>
-          <text style={{ fontSize: 13, color: C.bg, fontWeight: 'bold' }}>Forge</text>
-        </button>
+          <icon set="material-rounded" style={{ fontSize: 14, color: C.onPrimary, lineHeight: 14 }}>add</icon>
+          <text style={{ fontSize: 13, color: C.onPrimary, fontWeight: 'bold' }}>Forge</text>
+        </GlassButton>
       </view>
 
       {forgeError ? (
@@ -457,8 +469,18 @@ export function ShopScreen({ onBack, onApply }: Props) {
           independently — content overflows, scroll activates. */}
       <scroll className="pludo-scroll" style={{ flex: 1, height: 1, paddingLeft: 0, paddingRight: 0, paddingTop: 0 } as any}>
         {loading ? (
-          <view style={{ alignItems: 'center', paddingTop: 48, paddingBottom: 48 }}>
-            <text style={{ fontSize: 14, color: C.secondary }}>Loading assets...</text>
+          /* Skeleton mirrors the real grid's row/tile geometry so the layout
+             doesn't jump when assets land. */
+          <view style={{ flexDirection: 'column' }}>
+            {Array.from({ length: 4 }, (_, rowIdx) => (
+              <view key={rowIdx} style={{ flexDirection: 'row', height: 110 } as any}>
+                {Array.from({ length: SHOP_GRID_COLS }, (_, colIdx) => (
+                  <view key={colIdx} style={{ width: `${100 / SHOP_GRID_COLS}%`, height: 110, padding: 1 } as any}>
+                    <Skeleton width="100%" height="100%" radius={0} />
+                  </view>
+                ))}
+              </view>
+            ))}
           </view>
         ) : filtered.length === 0 ? (
           <view style={{ alignItems: 'center', paddingTop: 48, paddingBottom: 48, gap: 10 }}>
@@ -467,7 +489,7 @@ export function ShopScreen({ onBack, onApply }: Props) {
               {search ? 'No matching assets' : 'No assets yet'}
             </text>
             <text style={{ fontSize: 13, color: C.secondary, textAlign: 'center', lineHeight: 18 }}>
-              Tap <text style={{ color: C.green, fontWeight: 'bold' }}>+ Forge</text> to generate a new 3D asset.
+              Tap <text style={{ color: C.primary, fontWeight: 'bold' }}>+ Forge</text> to generate a new 3D asset.
             </text>
           </view>
         ) : (
@@ -496,9 +518,9 @@ export function ShopScreen({ onBack, onApply }: Props) {
       {showApplyBar ? (
         <view style={{
           position: 'absolute', left: 0, right: 0, bottom: 0,
-          backgroundColor: 'rgba(20,20,22,0.96)',
+          ...glass({ fill: 'rgba(20,20,22,0.96)' }),
           borderTopWidth: 1, borderTopColor: C.border,
-          paddingLeft: 12, paddingRight: 12, paddingTop: 12, paddingBottom: 12,
+          paddingLeft: 12, paddingRight: 12, paddingTop: 12, paddingBottom: applyBarPad,
           flexDirection: 'row', alignItems: 'center', gap: 10,
         }}>
           <scroll horizontal className="pludo-scroll" style={{ flex: 1 }}>
@@ -515,15 +537,15 @@ export function ShopScreen({ onBack, onApply }: Props) {
               ))}
             </view>
           </scroll>
-          <button onClick={applyNow} style={{
-            backgroundColor: C.green, borderRadius: 14, borderWidth: 0,
+          <GlassButton onClick={applyNow} style={{
+            backgroundColor: C.primary, borderRadius: 14, borderWidth: 0,
             paddingLeft: 18, paddingRight: 18, paddingTop: 12, paddingBottom: 12,
             flexShrink: 0,
           }}>
-            <text style={{ fontSize: 14, color: C.bg, fontWeight: 'bold' }}>
+            <text style={{ fontSize: 14, color: C.onPrimary, fontWeight: 'bold' }}>
               Apply ({selected.size})
             </text>
-          </button>
+          </GlassButton>
         </view>
       ) : null}
     </view>

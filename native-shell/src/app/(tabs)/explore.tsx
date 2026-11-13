@@ -6,9 +6,11 @@ import { GlassView } from 'expo-glass-effect';
 import { SymbolView } from 'expo-symbols';
 import { GameCard } from '../../components/GameCard';
 import { useGames } from '../../components/useGames';
+import { useGridColumns } from '../../components/useGridColumns';
 
 export default function ExploreScreen() {
   const insets = useSafeAreaInsets();
+  const { cols, maxWidth } = useGridColumns();
   const { games } = useGames();
   const router = useRouter();
   const [q, setQ] = useState('');
@@ -27,12 +29,19 @@ export default function ExploreScreen() {
         data={results}
         keyExtractor={g => String(g.id)}
         keyboardDismissMode="on-drag"
-        contentContainerStyle={{ paddingTop: insets.top + 76, paddingBottom: insets.bottom + 90, paddingHorizontal: 16, gap: 14 }}
-        renderItem={({ item }) => <GameCard game={item} onOpen={() => router.push(`/game/${item.id}`)} />}
+        contentContainerStyle={{ paddingTop: insets.top + 76, paddingBottom: insets.bottom + 90, paddingHorizontal: 16, gap: 14, width: '100%', maxWidth, alignSelf: 'center' }}
+        key={`cols-${cols}`}
+        numColumns={cols}
+        columnWrapperStyle={cols > 1 ? { gap: 14 } : undefined}
+        renderItem={({ item }) => (
+          <View style={{ flex: 1 / cols }}>
+            <GameCard game={item} onOpen={() => router.push(`/game/${item.id}`)} />
+          </View>
+        )}
         ListEmptyComponent={<Text style={styles.empty}>No games match “{q}”.</Text>}
       />
       {/* Floating glass search field over the scrolling results. */}
-      <GlassView style={[styles.search, { top: insets.top + 12 }]} glassEffectStyle="regular" isInteractive>
+      <GlassView style={[styles.search, { top: insets.top + 12, maxWidth: 640, alignSelf: 'center', width: '92%' }]} glassEffectStyle="regular" isInteractive>
         <SymbolView name="magnifyingglass" size={16} tintColor="rgba(255,255,255,0.7)" />
         <TextInput
           value={q}
@@ -50,7 +59,7 @@ export default function ExploreScreen() {
 
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: '#000' },
-  search: { position: 'absolute', left: 16, right: 16, height: 48, borderRadius: 24, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16 },
+  search: { position: 'absolute', height: 48, borderRadius: 24, flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16 },
   input: { flex: 1, color: '#fff', fontSize: 16 },
   empty: { color: '#8E8E93', textAlign: 'center', marginTop: 40 },
 });

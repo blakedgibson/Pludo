@@ -146,37 +146,3 @@ export async function createBlankGame(opts: {
   return Number(data.gameId);
 }
 
-/** A model made by the AI forge (mirrors ReactUnity's AvatarItemData). */
-export interface ForgedItem {
-  id?: number;
-  name: string;
-  category: string;
-  imageUrl?: string;
-  thumbnailUrl?: string;
-  modelUrl?: string;
-}
-
-/** Starts an AI 3D-model forge job; the server moderates the prompt. */
-export async function startModelForge(prompt: string, creatorName: string): Promise<string> {
-  const r = await fetch(`${API_BASE}/ai/generate-avatar-item`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, creatorName }),
-  });
-  const data = await r.json().catch(() => ({}));
-  if (!r.ok || !data?.jobId) throw new Error(data?.error || `Couldn't start the forge (HTTP ${r.status}).`);
-  return String(data.jobId);
-}
-
-export type ForgeStatus =
-  | { status: 'pending' | 'modeling' }
-  | { status: 'done'; item: ForgedItem }
-  | { status: 'error'; error: string };
-
-export async function forgeStatus(jobId: string): Promise<ForgeStatus> {
-  const r = await fetch(`${API_BASE}/ai/generate-avatar-item/status/${encodeURIComponent(jobId)}`);
-  const data = await r.json().catch(() => ({}));
-  if (data?.status === 'done' && data.item) return { status: 'done', item: data.item };
-  if (data?.status === 'error') return { status: 'error', error: data.error || 'Forge failed. Try a different prompt.' };
-  return { status: data?.status === 'modeling' ? 'modeling' : 'pending' };
-}

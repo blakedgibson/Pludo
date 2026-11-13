@@ -37,16 +37,11 @@ export function validatePromptLength(prompt: string): PromptCheck {
 }
 
 // ── 2. Content filter ─────────────────────────────────────────────────────────
-// First-pass blocklist. Claude has its own safety guardrails as a second layer.
-// Patterns use word-boundary anchors to avoid false positives on substrings.
+// Thin wrappers over the moderation engine (src/moderation/) kept for the
+// existing call sites and tests. The engine handles leetspeak, homoglyphs,
+// spacing tricks, phrase lists, PII and the Scunthorpe allowlist.
 
-const BLOCKED_PATTERNS: Array<{ re: RegExp; category: string }> = [
-  { re: /\b(rape|sexual\s+assault|child\s+porn|cp\b|loli)\b/i,            category: 'sexual violence / CSAM' },
-  { re: /\b(fuck|shit|cock|pussy|cunt|dick|bitch|asshole)\b/i,             category: 'profanity' },
-  { re: /\b(nigg(er|a)s?|faggots?|trann(y|ies)|kikes?|spics?|chinks?|wetbacks?|gooks?)\b/i, category: 'hate speech' },
-  { re: /\b(genocide|ethnic\s+cleansing|mass\s+murder|torture\s+porn)\b/i, category: 'extreme violence' },
-  { re: /\bkill\s+(trump|biden|obama|putin|musk|zuckerberg|elon)\b/i,       category: 'real-person targeting' },
-];
+import { moderateText } from './moderation/engine.js';
 
 export interface ContentFilterResult {
   ok: boolean;
@@ -54,18 +49,13 @@ export interface ContentFilterResult {
 }
 
 export function filterContent(prompt: string): ContentFilterResult {
-  for (const { re, category } of BLOCKED_PATTERNS) {
-    if (re.test(prompt)) return { ok: false, category };
-  }
-  return { ok: true };
+  const r = moderateText(prompt, 'prompt');
+  if (r.ok) return { ok: true };
+  const v = r.violations.find(x => x.action === 'reject');
+  return { ok: false, category: v?.category ?? 'policy' };
 }
 
 // ── 2b. In-game chat moderation ───────────────────────────────────────────────
-// Lighter-touch than filterContent: the chat surface should accept normal
-// conversation, mask casual profanity, and only block messages that contain
-// truly disallowed content (hate speech, sexual violence, real-person violent
-// targeting). Rate-limiting is the room's responsibility — this is purely
-// content classification.
 
 export interface ChatModerationResult {
   ok: true;
@@ -79,31 +69,13 @@ export interface ChatModerationReject {
 }
 export type ChatModeration = ChatModerationResult | ChatModerationReject;
 
-// Same pattern shape as BLOCKED_PATTERNS but with a per-pattern action.
-// 'censor' replaces the matched substring with the appropriate number of *s
-// so the conversation can continue; 'reject' kills the message entirely.
-const CHAT_PATTERNS: Array<{ re: RegExp; category: string; action: 'censor' | 'reject' }> = [
-  { re: /\b(rape|sexual\s+assault|child\s+porn|cp|loli)\b/i,                                      category: 'sexual violence / CSAM',  action: 'reject' },
-  { re: /\b(nigg(?:er|a)s?|faggots?|trann(?:y|ies)|kikes?|spics?|chinks?|wetbacks?|gooks?)\b/i,    category: 'hate speech',             action: 'reject' },
-  { re: /\b(genocide|ethnic\s+cleansing|mass\s+murder)\b/i,                                       category: 'extreme violence',        action: 'reject' },
-  { re: /\bkill\s+(trump|biden|obama|putin|musk|zuckerberg|elon)\b/i,                              category: 'real-person targeting',   action: 'reject' },
-  { re: /\b(fuck|shit|cock|pussy|cunt|dick|bitch|asshole|bastard|piss)\b/i,                        category: 'profanity',               action: 'censor' },
-];
-
-export function moderateChat(text: string): ChatModeration {
-  for (const { re, category, action } of CHAT_PATTERNS) {
-    if (action === 'reject' && re.test(text)) {
-      return { ok: false, category, reason: 'Message blocked by moderation.' };
-    }
+export function moderateChat(text: string, strict = true): ChatModeration {
+  const r = moderateText(text, 'chat', { strict });
+  if (!r.ok) {
+    const v = r.violations.find(x => x.action === 'reject');
+    return { ok: false, category: v?.category ?? 'policy', reason: r.userMessage ?? 'Message blocked by moderation.' };
   }
-  let censored = false;
-  let cleaned = text;
-  for (const { re, action } of CHAT_PATTERNS) {
-    if (action !== 'censor') continue;
-    cleaned = cleaned.replace(new RegExp(re.source, re.flags.replace('g', '') + 'g'),
-      (match) => { censored = true; return '*'.repeat(match.length); });
-  }
-  return { ok: true, text: cleaned, censored };
+  return { ok: true, text: r.text, censored: r.violations.some(v => v.action === 'censor') };
 }
 
 // ── 3. Lua script security scan ───────────────────────────────────────────────

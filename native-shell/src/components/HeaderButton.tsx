@@ -77,12 +77,13 @@ export function useOpenCreator() {
 }
 
 /** The header "+": a Liquid Glass dropdown — Create Game (name prompt →
- *  editor) or Create 3D Model (AI forge sheet). Signed-out users are sent to
- *  the You tab to sign in instead. */
+ *  editor) or Create 3D Model (the Model Studio: build from parts, no AI).
+ *  Signed-out users are sent to the You tab to sign in instead. */
 export function CreateMenu() {
   const { session } = useAuth();
   const router = useRouter();
   const createGame = useOpenCreator();
+  const { openStudio } = useUnity();
   return (
     <Host matchContents>
       <Menu
@@ -94,7 +95,7 @@ export function CreateMenu() {
         <Button
           label="Create 3D Model"
           systemImage="cube"
-          onPress={() => (session ? router.push('/forge') : router.navigate('/you'))}
+          onPress={() => (session ? openStudio() : router.navigate('/you'))}
         />
       </Menu>
     </Host>

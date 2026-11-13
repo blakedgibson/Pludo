@@ -7,7 +7,7 @@ import {
   Button, Form, Host, HStack, Image, LabeledContent, Section, Spacer, Text, Toggle,
 } from '@expo/ui/swift-ui';
 import {
-  buttonBorderShape, buttonStyle, controlSize, foregroundStyle, frame, glassEffect, labelStyle,
+  buttonBorderShape, buttonStyle, controlSize, foregroundStyle, frame, labelStyle,
   scrollContentBackground,
 } from '@expo/ui/swift-ui/modifiers';
 
@@ -26,7 +26,8 @@ export interface HudState {
 export interface HudActions {
   command: (cmd: string) => void;   // pause | resume | reset | shiftLock | leave
   move: (x: number, y: number) => void;
-  jump: () => void;
+  jump: () => void;          // press-down: jump now and start hold-to-hop
+  jumpRelease: () => void;   // finger lifted: stop hopping
 }
 
 const MENU_W = 340;
@@ -38,7 +39,7 @@ const MENU_W = 340;
 // is box-none so taps elsewhere reach Unity (camera orbit etc.).
 export function GameHud({ state, actions }: { state: HudState; actions: HudActions }) {
   const insets = useSafeAreaInsets();
-  const { height: H } = useWindowDimensions();
+  const { width: W, height: H } = useWindowDimensions();
   const [menuOpen, setMenuOpen] = useState(false);
 
   if (!state.active || state.popup) return null;
@@ -72,21 +73,24 @@ export function GameHud({ state, actions }: { state: HudState; actions: HudActio
       {/* ── Joystick + jump (hidden while paused, like Roblox) ── */}
       {!menuOpen && (
         <>
-          <Joystick left={Math.max(insets.left, 20)} bottom={Math.max(insets.bottom, 16)} onMove={actions.move} />
+          <DynamicJoystick
+            zone={{ left: 0, bottom: 0, width: W * 0.42, height: H * 0.62 }}
+            inset={{ left: Math.max(insets.left, 16), bottom: Math.max(insets.bottom, 12) }}
+            onMove={actions.move}
+          />
           <Pressable
             onPressIn={actions.jump}
+            onPressOut={actions.jumpRelease}
             accessibilityRole="button"
             accessibilityLabel="Jump"
-            hitSlop={12}
-            style={[styles.abs, { right: Math.max(insets.right, 24), bottom: Math.max(insets.bottom, 20) }]}
+            hitSlop={18}
+            style={[styles.abs, { right: Math.max(insets.right, 28), bottom: Math.max(insets.bottom, 22) }]}
           >
-            {/* Real SwiftUI Liquid Glass; the Pressable owns the touch so the
-                jump fires on press-down, not on release. */}
-            <Host matchContents pointerEvents="none">
-              <HStack modifiers={[frame({ width: JUMP, height: JUMP }), glassEffect({ glass: { variant: 'regular', interactive: true }, shape: 'circle' })]}>
-                <Image systemName="arrow.up" size={30} color="white" />
-              </HStack>
-            </Host>
+            {/* Interactive Liquid Glass; the Pressable owns the touch so the
+                jump fires on press-down (and repeats while held, like Roblox). */}
+            <GlassView style={styles.jump} glassEffectStyle="regular" isInteractive tintColor="rgba(0,0,0,0.28)">
+              <SymbolView name="arrow.up" size={40} weight="bold" tintColor="#fff" style={styles.jumpIcon} />
+            </GlassView>
           </Pressable>
         </>
       )}
@@ -148,20 +152,26 @@ function HealthBar({ hp }: { hp: number }) {
   );
 }
 
-const JUMP = 76;
-const JOY_SIZE = 132;
-const KNOB = 56;
+const JUMP = 96;
+const JOY_SIZE = 140;
+const KNOB = 58;
 const JOY_R = (JOY_SIZE - KNOB) / 2;
 
-// Fixed-base thumbstick drawn with SwiftUI Liquid Glass (clear base, regular
-// knob). x right, y forward (screen up), both -1..1, sent on every move and
-// zeroed on release. The RN view on top owns the touch.
-function Joystick({ left, bottom, onMove }: { left: number; bottom: number; onMove: (x: number, y: number) => void }) {
+// Roblox-style dynamic thumbstick: invisible until a thumb lands anywhere in
+// the lower-left zone, then a Liquid Glass stick appears centred under it and
+// follows the drag; it disappears again on release. x right, y forward (screen
+// up), both -1..1, zeroed on release.
+function DynamicJoystick({ zone, inset, onMove }: {
+  zone: { left: number; bottom: number; width: number; height: number };
+  inset: { left: number; bottom: number };
+  onMove: (x: number, y: number) => void;
+}) {
+  const [origin, setOrigin] = useState<{ x: number; y: number } | null>(null);
   const [knob, setKnob] = useState({ x: 0, y: 0 });
-  const [box] = useState(() => ({ onMove, sx: 0, sy: 0 }));
-  // PanResponder handlers are bound once; they read the newest callback here.
+  const [box] = useState(() => ({ onMove, sx: 0, sy: 0, ox: 0, oy: 0, zw: zone.width, zh: zone.height, il: inset.left, ib: inset.bottom }));
+  // PanResponder handlers are bound once; they read the newest values here.
   // eslint-disable-next-line react-hooks/immutability
-  useEffect(() => { box.onMove = onMove; });
+  useEffect(() => { box.onMove = onMove; box.zw = zone.width; box.zh = zone.height; box.il = inset.left; box.ib = inset.bottom; });
 
   const [responder] = useState(() => {
     const update = (dx: number, dy: number) => {
@@ -171,17 +181,20 @@ function Joystick({ left, bottom, onMove }: { left: number; bottom: number; onMo
       setKnob({ x, y });
       box.onMove(+(x / JOY_R).toFixed(3), +(-y / JOY_R).toFixed(3));
     };
-    const end = () => { setKnob({ x: 0, y: 0 }); box.onMove(0, 0); };
+    const end = () => { setOrigin(null); setKnob({ x: 0, y: 0 }); box.onMove(0, 0); };
     return PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onPanResponderGrant: (e) => {
-        // Where the finger landed, relative to the stick's centre; moves are
-        // that plus the gesture's travel.
-        box.sx = e.nativeEvent.locationX - JOY_SIZE / 2;
-        box.sy = e.nativeEvent.locationY - JOY_SIZE / 2;
-        update(box.sx, box.sy);
+        // Centre the stick under the thumb, kept fully on screen.
+        const half = JOY_SIZE / 2;
+        box.sx = e.nativeEvent.locationX;
+        box.sy = e.nativeEvent.locationY;
+        box.ox = Math.min(Math.max(box.sx, box.il + half), box.zw - half);
+        box.oy = Math.min(Math.max(box.sy, half), box.zh - box.ib - half);
+        setOrigin({ x: box.ox, y: box.oy });
+        update(box.sx - box.ox, box.sy - box.oy);
       },
-      onPanResponderMove: (_e, g) => update(box.sx + g.dx, box.sy + g.dy),
+      onPanResponderMove: (_e, g) => update(box.sx + g.dx - box.ox, box.sy + g.dy - box.oy),
       onPanResponderRelease: end,
       onPanResponderTerminate: end,
       onPanResponderTerminationRequest: () => false,
@@ -189,21 +202,19 @@ function Joystick({ left, bottom, onMove }: { left: number; bottom: number; onMo
   });
 
   return (
-    <View style={[styles.abs, { left, bottom, width: JOY_SIZE, height: JOY_SIZE }]}>
-      <Host style={StyleSheet.absoluteFill} pointerEvents="none">
-        <HStack modifiers={[frame({ width: JOY_SIZE, height: JOY_SIZE }), glassEffect({ glass: { variant: 'clear' }, shape: 'circle' })]}>
-          <Spacer />
-        </HStack>
-      </Host>
-      <View pointerEvents="none" style={[styles.knobWrap, { transform: [{ translateX: knob.x }, { translateY: knob.y }] }]}>
-        <Host style={StyleSheet.absoluteFill}>
-          <HStack modifiers={[frame({ width: KNOB, height: KNOB }), glassEffect({ glass: { variant: 'regular' }, shape: 'circle' })]}>
-            <Spacer />
-          </HStack>
-        </Host>
-      </View>
-      {/* Touch surface above the glass. */}
-      <View {...responder.panHandlers} style={StyleSheet.absoluteFill} accessibilityLabel="Movement joystick" />
+    <View
+      {...responder.panHandlers}
+      accessibilityLabel="Movement joystick"
+      style={[styles.abs, { left: zone.left, bottom: zone.bottom, width: zone.width, height: zone.height }]}
+    >
+      {origin && (
+        <View pointerEvents="none" style={[styles.abs, { left: origin.x - JOY_SIZE / 2, top: origin.y - JOY_SIZE / 2, width: JOY_SIZE, height: JOY_SIZE }]}>
+          <GlassView style={styles.joyBase} glassEffectStyle="clear" tintColor="rgba(0,0,0,0.18)" />
+          <View style={[styles.knobWrap, { transform: [{ translateX: knob.x }, { translateY: knob.y }] }]}>
+            <GlassView style={styles.knob} glassEffectStyle="regular" isInteractive tintColor="rgba(255,255,255,0.18)" />
+          </View>
+        </View>
+      )}
     </View>
   );
 }
@@ -218,6 +229,13 @@ const styles = StyleSheet.create({
   hpFill: { height: '100%', borderRadius: 3 },
   hpText: { color: '#fff', fontSize: 11, fontWeight: '700', minWidth: 20, textAlign: 'right' },
   knobWrap: { position: 'absolute', left: JOY_R, top: JOY_R, width: KNOB, height: KNOB },
+  knob: { width: KNOB, height: KNOB, borderRadius: KNOB / 2 },
+  joyBase: { width: JOY_SIZE, height: JOY_SIZE, borderRadius: JOY_SIZE / 2 },
+  jump: {
+    width: JUMP, height: JUMP, borderRadius: JUMP / 2, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.35)',
+  },
+  jumpIcon: { width: 40, height: 40 },
   dim: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center',

@@ -5,9 +5,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GameCard } from '../../components/GameCard';
 import { CreateMenu, HeaderButton, HeaderTitle } from '../../components/HeaderButton';
 import { useGames } from '../../components/useGames';
+import { useGridColumns } from '../../components/useGridColumns';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const { cols, maxWidth } = useGridColumns();
   const router = useRouter();
   const { games, error, loading, reload } = useGames();
 
@@ -22,7 +24,7 @@ export default function HomeScreen() {
 
       <FlatList
         style={styles.page}
-        contentContainerStyle={{ paddingTop: 8, paddingBottom: insets.bottom + 90, paddingHorizontal: 16, gap: 14 }}
+        contentContainerStyle={{ paddingTop: 8, paddingBottom: insets.bottom + 90, paddingHorizontal: 16, gap: 14, width: '100%', maxWidth, alignSelf: 'center' }}
         data={games}
         keyExtractor={g => String(g.id)}
         refreshControl={<RefreshControl refreshing={loading && games.length > 0} onRefresh={reload} tintColor="#fff" />}
@@ -30,7 +32,14 @@ export default function HomeScreen() {
           loading ? <ActivityIndicator color="#fff" style={{ marginTop: 40 }} />
                   : <Text style={styles.empty}>{error ? `Couldn't load games: ${error}` : 'No games yet.'}</Text>
         }
-        renderItem={({ item }) => <GameCard game={item} onOpen={() => router.push(`/game/${item.id}`)} />}
+        key={`cols-${cols}`}
+        numColumns={cols}
+        columnWrapperStyle={cols > 1 ? { gap: 14 } : undefined}
+        renderItem={({ item }) => (
+          <View style={{ flex: 1 / cols }}>
+            <GameCard game={item} onOpen={() => router.push(`/game/${item.id}`)} />
+          </View>
+        )}
       />
     </View>
   );

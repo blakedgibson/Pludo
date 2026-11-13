@@ -75,14 +75,19 @@ internal class ReactBootstrapper : MonoBehaviour
 
         var scaler = canvasGO.AddComponent<CanvasScaler>();
         scaler.uiScaleMode         = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(390, 844);
         scaler.screenMatchMode     = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-        // Boot always lands on the portrait lobby. On tablet, match height
-        // (pins visible height at exactly 844 — protects every drag-sheet/
-        // panel height constant from clipping) and let width float, which is
-        // what grants the bonus width tablet grid/column layouts use. Phone
-        // keeps the original 0.5 blend untouched.
-        scaler.matchWidthOrHeight  = DeviceIdiom.IsTablet ? 1f : 0.5f;
+        // Boot orientation is idiom-dependent: phones land on the portrait
+        // lobby, tablets are landscape on every surface (MobileOrientationManager
+        // .LandscapeEverywhere). Keep these in lockstep with ApplyCanvasReference
+        // there — it swaps the same two fields on every orientation change, and a
+        // mismatch means the first painted frame lays out in the wrong space.
+        bool landscape = DeviceIdiom.IsTablet;
+        scaler.referenceResolution = landscape ? new Vector2(844, 390) : new Vector2(390, 844);
+        // Tablet pins the axis the phone-tuned layout code depends on for "not
+        // clipping" — width in landscape (edge-docked panels), height in
+        // portrait (drag sheets) — and lets the other float as bonus space.
+        // Phone keeps the original 0.5 blend untouched.
+        scaler.matchWidthOrHeight  = DeviceIdiom.IsTablet ? (landscape ? 0f : 1f) : 0.5f;
         ReactUISetup.MainScaler    = scaler;
 
         canvasGO.AddComponent<GraphicRaycaster>();

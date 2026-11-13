@@ -3,7 +3,7 @@ import express, { type Request, type Response } from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildGameHtml, extractGameLogic } from './game-html.js';
 import { selectTemplate, buildTemplatePrompt, scoreTemplates, GAME_TEMPLATES, CONFIDENCE_THRESHOLD, type TemplateExample } from './game-templates.js';
@@ -17,7 +17,7 @@ import {
 } from './prompt-validation.js';
 import { createPreview, createRefine, waitForTask, meshyDevMode, meshySkipRefine, getBalance } from './meshy.js';
 import { uploadBuffer, downloadBuffer, publicUrl, r2Configured, listObjects } from './r2.js';
-import { loadIndex as loadAssetCacheIndex, getAllEntries as getAllCacheEntries } from './asset-cache.js';
+import { loadIndex as loadAssetCacheIndex, getAllEntries as getAllCacheEntries, register as registerAsset } from './asset-cache.js';
 import { getCatalog, buildCatalogSection, type CatalogItem } from './catalog.js';
 import { roomManager } from './room-manager.js';
 import {
@@ -2521,6 +2521,75 @@ app.post('/api/avatar-items', async (req, res) => {
   };
   avatarItems.set(item.id, item);
   res.status(201).json(item);
+});
+
+// POST /api/user-models — publish a model the player BUILT by hand in the
+// native 3D model creator (no AI generation involved). Body:
+//   { name, destination: 'asset'|'avatar'|'both', category?, description?,
+//     glbBase64, thumbnailBase64?, creatorName?, userId? }
+// The GLB (exported by Unity's glTFast from the player's parts) is stored in
+// R2 under game-assets/v1/ so it shows in every game's asset library, and/or
+// listed as an avatar item in the marketplace. Name + preview are moderated.
+const USER_MODEL_CATEGORIES = ['head','hair','face','neck','top','bottom','shoes','back','front','waist','accessory'];
+app.post('/api/user-models', express.json({ limit: '12mb' }), rateLimit(60_000, 10), async (req, res) => {
+  const {
+    name: rawName = '', destination = 'asset', category: rawCategory = 'accessory', description: rawDesc = '',
+    glbBase64 = '', thumbnailBase64 = '', creatorName: rawCreator = 'Player', userId = '',
+  } = req.body as Record<string, string>;
+  if (!['asset', 'avatar', 'both'].includes(destination)) { res.status(400).json({ error: 'destination must be asset, avatar or both' }); return; }
+  const creatorName = safeDisplayName(rawCreator, userId || req.ip || '');
+  const actor = { id: userId || `ip:${req.ip}`, name: creatorName };
+
+  const nameCheck = moderationCheck(String(rawName).trim().slice(0, 40), 'item_name', actor, { targetType: 'user_model' });
+  if (!String(rawName).trim()) { res.status(400).json({ error: 'Give your model a name.' }); return; }
+  if (!nameCheck.ok) { res.status(422).json({ error: `Name: ${nameCheck.userMessage}` }); return; }
+  const descCheck = moderationCheck(String(rawDesc).slice(0, 200), 'game_description', actor, { targetType: 'user_model' });
+  if (!descCheck.ok) { res.status(422).json({ error: `Description: ${descCheck.userMessage}` }); return; }
+
+  const glb = Buffer.from(String(glbBase64), 'base64');
+  // A binary glTF starts with the ASCII magic "glTF".
+  if (glb.length < 20 || glb.toString('ascii', 0, 4) !== 'glTF') { res.status(400).json({ error: 'Model data is not a valid GLB.' }); return; }
+  if (!r2Configured()) { res.status(503).json({ error: 'Model storage (R2) is not configured on this server.' }); return; }
+
+  const hash = createHash('sha256').update(glb).digest('hex').slice(0, 16);
+  const key  = `game-assets/v1/user-${hash}.glb`;
+  let thumbUrl: string | null = null;
+  try {
+    await uploadBuffer(key, glb);
+    if (thumbnailBase64) {
+      const thumbKey = `thumbnails/user-${hash}.jpg`;
+      await uploadBuffer(thumbKey, Buffer.from(String(thumbnailBase64), 'base64'), 'image/jpeg');
+      thumbUrl = publicUrl(thumbKey);
+    }
+  } catch (err) {
+    console.error('[user-models] R2 upload failed:', err);
+    res.status(502).json({ error: 'Upload failed. Try again.' });
+    return;
+  }
+
+  const preview = await checkModelThumbnail(thumbUrl ?? undefined, nameCheck.text, actor, { type: 'user_model' });
+  if (!preview.ok) { res.status(422).json({ error: preview.userMessage }); return; }
+
+  const modelUrl = publicUrl(key);
+  const out: { modelUrl: string | null; thumbnailUrl: string | null; cacheKey?: string; avatarItem?: AvatarItem } =
+    { modelUrl, thumbnailUrl: thumbUrl };
+
+  if (destination === 'asset' || destination === 'both') {
+    await registerAsset(`${nameCheck.text} (by ${creatorName})`, false, key, { title: nameCheck.text, thumbnailUrl: thumbUrl });
+    out.cacheKey = key;
+  }
+  if (destination === 'avatar' || destination === 'both') {
+    const category = USER_MODEL_CATEGORIES.includes(String(rawCategory)) ? String(rawCategory) : 'accessory';
+    const item: AvatarItem = {
+      id: _nextItemId++, name: nameCheck.text, category, rarity: 'Common', price: 0,
+      thumbnailUrl: thumbUrl ?? undefined, imageUrl: thumbUrl ?? undefined, modelUrl: modelUrl ?? undefined,
+      description: descCheck.text, creatorName, createdAt: new Date(),
+    };
+    avatarItems.set(item.id, item);
+    out.avatarItem = item;
+  }
+  console.log(`[user-models] "${nameCheck.text}" by ${creatorName} → ${destination} (${glb.length} B, ${key})`);
+  res.status(201).json(out);
 });
 
 // ── Avatar item generation pipeline ──────────────────────────────────────────
