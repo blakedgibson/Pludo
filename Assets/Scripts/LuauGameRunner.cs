@@ -13,7 +13,7 @@ using GLTFast;
 
 // Executes Luau game scripts via MoonSharp and wires their API calls to Unity.
 // GameLauncher is the entry point — call RunGame(GameData) to start a session.
-public class LuauGameRunner : MonoBehaviour
+public partial class LuauGameRunner : MonoBehaviour
 {
     [Header("Scene")]
     [SerializeField] private Transform gameRoot;
@@ -27,8 +27,8 @@ public class LuauGameRunner : MonoBehaviour
     private bool         _running;
     private int          _score;
     private float        _health        = 100f;
-    private float        _speed         = 5f;
-    private float        _jumpHeight    = 2f;
+    private float        _speed         = RobloxPhysics.WalkSpeed;
+    private float        _jumpHeight    = RobloxPhysics.JumpHeight;
     private float        _timeLimitSecs = 0f;
     private float        _timeElapsed   = 0f;
     private bool         _hasTimeLimit;
@@ -39,6 +39,10 @@ public class LuauGameRunner : MonoBehaviour
     private string       _gameGenre;
     private bool         _previewMode;     // true = editor preview, skip HUD globals + mobile controls
     public  bool         IsPreviewMode => _previewMode;
+    // Exposed so EditorCameraController can reveal the (normally hidden-in-preview)
+    // avatar while the Assign pick-mode flow is active — there's otherwise nothing
+    // visible for the creator to tap to name "the player" as a variable.
+    public  GameObject   PlayerInstance => _playerInstance;
     // True when this load has no Lua script (a brand-new blank game). Drives the
     // Roblox-style baseplate look: light-blue sky + gray checkerboard ground.
     private bool         _blankBaseplate;
@@ -747,11 +751,32 @@ public class LuauGameRunner : MonoBehaviour
             // Only spawn player if the Luau script didn't call Player.SetSpawnPoint.
             if (_playerInstance == null)
                 SpawnPlayer(playerSpawn != null ? playerSpawn.position : new Vector3(0, 3f, 0));
+            // Creator-placed spawn markers (chibi tray item) win over the AI-authored
+            // Player.SetSpawnPoint literal, same as Roblox SpawnLocations override a
+            // script default. Markers are user-added objects (EditorPlacedObject),
+            // so they materialize asynchronously via EditorState.Apply — wait for
+            // them before deciding whether to override.
+            StartCoroutine(ApplySpawnMarkerOverride(_pendingEditorStateJson));
             // In preview mode attach the orbital EditorCameraController; in play mode
             // just ensure the raw camera exists with correct clear flags.
             if (_previewMode) EnsureEditorCameraForPreview();
             else              EnsureGameCamera();
-            if (!_previewMode) NotifyReact("_gameActive", "true");
+            if (!_previewMode)
+            {
+                // Editor-authored HUD (Interface Builder elements/workflows and
+                // legacy HUD buttons). EditorState.Apply above restored them into
+                // SceneSettings; publish them for the game HUD exactly as
+                // GameRenderClient does for server sessions — without this, a
+                // local play-test (Play from the editor) never showed them.
+                NotifyReact("_hudButtons",          SceneSettings.HudButtonsJson ?? "");
+                NotifyReact("_interfaceElements",   SceneSettings.InterfaceElementsJson ?? "");
+                NotifyReact("_interfaceWorkflows",  SceneSettings.InterfaceWorkflowsJson ?? "");
+                NotifyReact("_gameActive", "true");
+            }
+            // Custom Logic: fire each placed object's "On Game Start" workflows
+            // now that the player and editor-state-restored objects both exist.
+            // Never in preview — the editor shows the world, not running behavior.
+            if (!_previewMode) RunGameStartWorkflows();
             // Two-phase spawn-point thumbnail. Camera state is recorded one frame after
             // OnStart so EnsureEditorCameraForPreview/EnsureGameCamera have settled, then:
             //   - placeholder capture at +3 s (early upload so My Games shows something)
@@ -881,6 +906,47 @@ public class LuauGameRunner : MonoBehaviour
             if (_previewMode) EditorCameraController.Instance?.SetSpawn(pos);
             return null;
         });
+    }
+
+    // Waits (bounded) for the editor-state overlay's added objects — including
+    // any placed "player spawn" chibi markers — to finish spawning, then, if at
+    // least one marker is present, teleports the player to a randomly-chosen
+    // one and makes it the spawn used for fall-recovery/reset. No-op when the
+    // creator hasn't placed any marker (existing Player.SetSpawnPoint behavior
+    // is untouched). Multiple markers are supported so a game can offer several
+    // spawn spots; single-player picks one at random on load.
+    private IEnumerator ApplySpawnMarkerOverride(string pendingEditorStateJson)
+    {
+        float deadline = Time.realtimeSinceStartup + 5f;
+        while (!EditorState.AddedAllPresent(this, pendingEditorStateJson) && Time.realtimeSinceStartup < deadline)
+            yield return null;
+
+        var markers = CollectSpawnMarkerPositions();
+        if (markers.Count == 0) yield break;
+
+        var pos = markers[UnityEngine.Random.Range(0, markers.Count)];
+        _lastSpawnPos = pos;
+        if (_playerInstance != null)
+        {
+            _playerInstance.transform.position = pos;
+            var rb = _playerInstance.GetComponent<Rigidbody>();
+            if (rb != null) { rb.linearVelocity = Vector3.zero; rb.angularVelocity = Vector3.zero; }
+        }
+        if (_previewMode) EditorCameraController.Instance?.SetSpawn(pos);
+    }
+
+    private System.Collections.Generic.List<Vector3> CollectSpawnMarkerPositions()
+    {
+        var list = new System.Collections.Generic.List<Vector3>();
+        if (gameRoot == null) return list;
+        for (int i = 0; i < gameRoot.childCount; i++)
+        {
+            var child = gameRoot.GetChild(i);
+            var marker = child.GetComponent<MeshyAssetMarker>();
+            if (marker != null && marker.AssetId == GameAssetLoader.SpawnMarkerCacheKey)
+                list.Add(child.position);
+        }
+        return list;
     }
 
     // Helper — every public method below is reachable from the DoString bg thread
@@ -1315,6 +1381,10 @@ public class LuauGameRunner : MonoBehaviour
         var renderers = FindObjectsByType<ReactRendererUGUI>();
         foreach (var r in renderers)
         {
+            // pauseGame is the tap-driven twin of the swipe-from-left gesture —
+            // React's main-menu button calls it so the joystick hides while the
+            // menu is up. Mirrors GameRenderClient's registration.
+            r.Globals["pauseGame"]       = (Action)HandleMobilePause;
             r.Globals["resumeGame"]      = (Action)ResumeFromPause;
             r.Globals["resetPlayer"]     = (Action)ResetPlayerToSpawn;
             r.Globals["toggleShiftLock"] = (Action)ToggleShiftLockGlobal;
@@ -1322,6 +1392,28 @@ public class LuauGameRunner : MonoBehaviour
 
         OnPlayerSpawned?.Invoke("local");
         Debug.Log("[LuauGameRunner] Player spawned with chibi avatar.");
+    }
+
+    // ── Custom Logic (workflow) execution ───────────────────────────────────────
+    // Entry point only — the interpreter itself lives in WorkflowInterpreter.cs
+    // (this class is `partial`) purely to keep this file's size sane. See that
+    // file's header comment for exactly what's implemented vs. structurally
+    // inert vs. impossible without new game systems.
+    private void RunGameStartWorkflows()
+    {
+        if (GameRoot == null) return;
+        var logics = GameRoot.GetComponentsInChildren<EditorObjectLogic>(true);
+        foreach (var logic in logics)
+        {
+            if (logic == null || logic.Workflows == null) continue;
+            foreach (var wf in logic.Workflows)
+            {
+                if (!wf.Enabled || wf.EventType != "gameStart") continue;
+                var vars = BuildVariableMap(logic);
+                if (!EvaluateGuards(wf.Guards, logic.gameObject, vars)) continue;
+                StartCoroutine(RunWorkflowSteps(wf.Steps, logic.gameObject, vars));
+            }
+        }
     }
 
     private static readonly string[] BodyPartNames = { "torso", "head", "left-arm", "right-arm", "left-leg", "right-leg" };
@@ -1373,7 +1465,12 @@ public class LuauGameRunner : MonoBehaviour
             // ── Master skeleton (torso, 65 Mixamo bones) ─────────────────────
             var masterGO = Instantiate(prefabs[0], wrapper.transform);
             masterGO.name = "ChibiSkeleton";
-            masterGO.transform.localPosition = Vector3.zero;
+            // The torso.fbx skeleton's Hips bone bind pose is offset ~0.302 in Z from
+            // the FBX's own root, off-centering the mesh from the player's rotation
+            // pivot (transform.rotation is set directly in gameplay) and making turns
+            // look like a swing instead of a spin-in-place. Same fix as
+            // GameRenderClient.BuildChibiVisual.
+            masterGO.transform.localPosition = new Vector3(0f, 0f, -0.302f);
             masterGO.transform.localScale    = Vector3.one;
             foreach (var c in masterGO.GetComponentsInChildren<Collider>()) Destroy(c);
 
@@ -2283,6 +2380,9 @@ public class LuauGameRunner : MonoBehaviour
 
     private void HandleMobilePause()
     {
+        // Hide the joystick while the menu is up so the player can't walk off
+        // behind the pause dim. ResumeFromPause puts it back.
+        MobileGameInput.Instance?.SetVisible(false);
         NotifyReact("_showEscape", "true");
     }
 

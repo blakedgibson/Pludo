@@ -20,6 +20,12 @@ import { uploadBuffer, downloadBuffer, publicUrl, r2Configured, listObjects } fr
 import { loadIndex as loadAssetCacheIndex, getAllEntries as getAllCacheEntries } from './asset-cache.js';
 import { getCatalog, buildCatalogSection, type CatalogItem } from './catalog.js';
 import { roomManager } from './room-manager.js';
+import {
+  check as moderationCheck, strike as moderationStrike, strikes as moderationStrikes,
+  checkPublish, checkGenerationPrompt, checkModelThumbnail, sanitizeGeneratedListing,
+  safeDisplayName, loadModerationState,
+} from './moderation/index.js';
+import { moderationRouter } from './moderation/routes.js';
 
 const PORT = process.env.PORT ? parseInt(process.env.PORT) : 4000;
 const app = express();
@@ -1783,8 +1789,14 @@ async function runForgeGame(prompt: string, gameId: number, jobId: string, userI
 
   const game = games.get(gameId);
   if (!game) throw new Error('Game record not found');
-  game.title             = sanitizeText(typeof parsed.title       === 'string' ? parsed.title       : 'Untitled Game') || 'Untitled Game';
-  game.description       = sanitizeText(typeof parsed.description === 'string' ? parsed.description : '');
+  // Claude writes the listing text from the user's prompt — run it through the
+  // same public-listing rules a human-written title would face.
+  const listing = sanitizeGeneratedListing(
+    sanitizeText(typeof parsed.title       === 'string' ? parsed.title       : 'Untitled Game') || 'Untitled Game',
+    sanitizeText(typeof parsed.description === 'string' ? parsed.description : ''),
+  );
+  game.title             = listing.title;
+  game.description       = listing.description;
   game.forgeReply        = typeof parsed.reply === 'string' ? parsed.reply.slice(0, 1500) : '';
   // Use the matched template genre as the authoritative genre; fall back to Claude's suggestion.
   game.genre             = template?.genre ?? (typeof parsed.genre === 'string' ? parsed.genre : 'action');
@@ -1882,8 +1894,9 @@ app.get(/^\/api\/glb\/(.+)$/, async (req, res) => {
 
 // POST /api/forge-game  — rate-limited: 5 per minute per IP
 app.post('/api/forge-game', rateLimit(60_000, 5), async (req, res) => {
-  const { prompt, creatorName = 'Player', userId = '', userAccessToken = '' } =
+  const { prompt, creatorName: rawCreatorName = 'Player', userId = '', userAccessToken = '' } =
     req.body as { prompt: string; creatorName?: string; userId?: string; userAccessToken?: string };
+  const creatorName = safeDisplayName(rawCreatorName, userId || String(rawCreatorName));
 
   // ── Pre-generation validation (runs before any DB write or Claude call) ──────
   const lengthCheck = validatePromptLength(prompt ?? '');
@@ -1892,10 +1905,9 @@ app.post('/api/forge-game', rateLimit(60_000, 5), async (req, res) => {
     return;
   }
 
-  const contentCheck = filterContent(prompt);
+  const contentCheck = moderationCheck(prompt, 'prompt', { id: userId || `ip:${req.ip}`, name: creatorName });
   if (!contentCheck.ok) {
-    console.warn(`[forge-game] content filter blocked prompt (${contentCheck.category}): "${prompt.slice(0, 80)}"`);
-    res.status(400).json({ error: 'This prompt violates our usage policy and cannot be used to generate a game.' });
+    res.status(400).json({ error: contentCheck.userMessage ?? 'This prompt violates our usage policy and cannot be used to generate a game.' });
     return;
   }
 
@@ -1960,14 +1972,23 @@ app.post('/api/forge-game', rateLimit(60_000, 5), async (req, res) => {
 // generation. Returns a real persisted gameId so the editor's autosave / edit
 // flow works; the editor loads a blank baseplate terrain (empty game_code).
 app.post('/api/create-blank-game', rateLimit(60_000, 20), async (req, res) => {
-  const { creatorName = 'Player', userId = '', userAccessToken = '' } =
-    req.body as { creatorName?: string; userId?: string; userAccessToken?: string };
+  const { creatorName: rawCreatorName = 'Player', userId = '', userAccessToken = '', title: rawTitle = '' } =
+    req.body as { creatorName?: string; userId?: string; userAccessToken?: string; title?: string };
+  const creatorName = safeDisplayName(rawCreatorName, userId || String(rawCreatorName));
+  // Optional name from the native "Name your game" prompt; same moderation as
+  // a published title. Blank → "Untitled Game".
+  let title = 'Untitled Game';
+  if (String(rawTitle).trim()) {
+    const titleCheck = moderationCheck(String(rawTitle).trim().slice(0, 60), 'game_title', { id: userId || `ip:${req.ip}`, name: creatorName }, { targetType: 'game' });
+    if (!titleCheck.ok) { res.status(422).json({ error: `Title: ${titleCheck.userMessage}` }); return; }
+    title = titleCheck.text || title;
+  }
 
   let gameId: number;
   if (SUPABASE_URL) {
     try {
       const insertData: Record<string, unknown> = {
-        title: 'Untitled Game',
+        title,
         description: '',
         creator_name: creatorName,
         game_code: '',
@@ -1978,15 +1999,15 @@ app.post('/api/create-blank-game', rateLimit(60_000, 20), async (req, res) => {
       const rows = await sbInsert('forge_games', insertData, userAccessToken || undefined);
       const dbId = Number(rows[0]?.id);
       if (!dbId) throw new Error('No ID returned from Supabase');
-      setGameById(dbId, { title: 'Untitled Game', creatorName, createdByUserId: userId, gameCode: '' });
+      setGameById(dbId, { title, creatorName, createdByUserId: userId, gameCode: '' });
       gameId = dbId;
       console.log(`[create-blank-game] persisted to Supabase id=${dbId} creator="${creatorName}"`);
     } catch (err) {
       console.error('[create-blank-game] Supabase insert failed, using in-memory only:', err);
-      gameId = createGame({ title: 'Untitled Game', creatorName, createdByUserId: userId, gameCode: '' }).id;
+      gameId = createGame({ title, creatorName, createdByUserId: userId, gameCode: '' }).id;
     }
   } else {
-    gameId = createGame({ title: 'Untitled Game', creatorName, createdByUserId: userId, gameCode: '' }).id;
+    gameId = createGame({ title, creatorName, createdByUserId: userId, gameCode: '' }).id;
   }
 
   res.json({ gameId });
@@ -2090,6 +2111,11 @@ app.post('/api/edit-game', rateLimit(60_000, 20), async (req, res) => {
 
   if (!gameId || !userMessage?.trim()) {
     res.status(400).json({ error: 'gameId and userMessage are required' });
+    return;
+  }
+  const editCheck = moderationCheck(userMessage, 'prompt', { id: userAccessToken ? userIdFromJwt(userAccessToken) : `ip:${req.ip}` }, { targetType: 'game', targetId: String(gameId) });
+  if (!editCheck.ok) {
+    res.status(400).json({ error: editCheck.userMessage ?? 'This request violates our usage policy.' });
     return;
   }
 
@@ -2473,17 +2499,24 @@ app.get('/api/avatar-items', (req, res) => {
 });
 
 // POST /api/avatar-items  — add an item to the catalog (called by generation pipeline)
-app.post('/api/avatar-items', (req, res) => {
+app.post('/api/avatar-items', async (req, res) => {
   const { name, category, rarity, price, imageUrl, thumbnailUrl, modelUrl, description, creatorName }
     = req.body as Partial<AvatarItem>;
   if (!name || !category) { res.status(400).json({ error: 'name and category required' }); return; }
+  const itemActor = { id: `ip:${req.ip}`, name: creatorName };
+  const nameCheck = moderationCheck(name, 'item_name', itemActor, { targetType: 'avatar_item' });
+  if (!nameCheck.ok) { res.status(422).json({ error: `Name: ${nameCheck.userMessage}` }); return; }
+  const descCheck = moderationCheck(description ?? '', 'game_description', itemActor, { targetType: 'avatar_item' });
+  if (!descCheck.ok) { res.status(422).json({ error: `Description: ${descCheck.userMessage}` }); return; }
+  const preview = await checkModelThumbnail(thumbnailUrl ?? imageUrl, name, itemActor, { type: 'avatar_item' });
+  if (!preview.ok) { res.status(422).json({ error: preview.userMessage }); return; }
   const item: AvatarItem = {
     id: _nextItemId++,
-    name, category,
+    name: nameCheck.text, category,
     rarity: (rarity ?? 'Common') as AvatarItem['rarity'],
     price:  price  ?? 0,
-    imageUrl, thumbnailUrl, modelUrl, description,
-    creatorName: creatorName ?? 'Pludo',
+    imageUrl, thumbnailUrl, modelUrl, description: descCheck.text,
+    creatorName: safeDisplayName(creatorName ?? 'Pludo', req.ip ?? ''),
     createdAt: new Date(),
   };
   avatarItems.set(item.id, item);
@@ -2513,13 +2546,19 @@ interface ItemJob {
 }
 const itemJobs = new Map<string, ItemJob>();
 
-app.post('/ai/generate-avatar-item', (req, res) => {
+app.post('/ai/generate-avatar-item', async (req, res) => {
   if (!process.env.ANTHROPIC_API_KEY) {
     res.status(503).json({ error: 'ANTHROPIC_API_KEY not configured' });
     return;
   }
-  const { prompt, creatorName = 'Player' } = req.body as { prompt: string; creatorName?: string };
+  const { prompt, creatorName: rawItemCreator = 'Player' } = req.body as { prompt: string; creatorName?: string };
   if (!prompt?.trim()) { res.status(400).json({ error: 'prompt required' }); return; }
+  const creatorName = safeDisplayName(rawItemCreator, req.ip ?? '');
+  const itemActor = { id: `ip:${req.ip}`, name: creatorName };
+
+  // Prompt gate: lexicon + AI. Runs before any paid Claude/Meshy call.
+  const promptCheck = await checkGenerationPrompt(prompt, 'asset_prompt', itemActor, { ai: true });
+  if (!promptCheck.ok) { res.status(400).json({ error: promptCheck.userMessage }); return; }
 
   const jobId = randomUUID();
   itemJobs.set(jobId, { status: 'pending' });
@@ -2543,6 +2582,13 @@ app.post('/ai/generate-avatar-item', (req, res) => {
         name: string; category: string; rarity: string;
         description: string; meshy_prompt: string; price: number;
       };
+      // Claude's output is derived from user input — moderate it like UGC.
+      const metaName = moderationCheck(meta.name, 'item_name', itemActor, { targetType: 'avatar_item' });
+      const metaDesc = moderationCheck(meta.description ?? '', 'game_description', itemActor, { targetType: 'avatar_item' });
+      const metaMeshy = moderationCheck(meta.meshy_prompt ?? '', 'asset_prompt', itemActor, { targetType: 'avatar_item' });
+      if (!metaMeshy.ok) throw new Error('MODERATION: generated model prompt failed review');
+      meta.name = metaName.ok ? metaName.text : 'Mystery Item';
+      meta.description = metaDesc.ok ? metaDesc.text : '';
 
       // Step 2: Generate 3D model with Meshy (if API key available)
       let glbUrl: string | undefined;
@@ -2553,6 +2599,9 @@ app.post('/ai/generate-avatar-item', (req, res) => {
         const task      = await waitForTask(previewId, 150_000);
         glbUrl       = task.model_urls?.glb;
         thumbnailUrl = task.thumbnail_url;
+        // Post-generation gate: look at the actual rendered model.
+        const look = await checkModelThumbnail(thumbnailUrl, `${meta.name}: ${meta.meshy_prompt}`, itemActor, { type: 'avatar_item' });
+        if (!look.ok) throw new Error('MODERATION: generated model failed visual review');
       }
 
       // Step 3: Save to catalog
@@ -2573,7 +2622,8 @@ app.post('/ai/generate-avatar-item', (req, res) => {
       itemJobs.set(jobId, { status: 'done', itemId: item.id });
     } catch (err) {
       const msg = String((err as Error)?.message ?? err);
-      const userMsg = msg.includes('MESHY_API_KEY') ? 'Meshy API key not configured'
+      const userMsg = msg.startsWith('MODERATION') ? 'This item didn’t pass our content review. Try a different idea.'
+        : msg.includes('MESHY_API_KEY') ? 'Meshy API key not configured'
         : msg.includes('credit balance') ? 'Anthropic API out of credits'
         : 'Item generation failed — try a different prompt';
       itemJobs.set(jobId, { status: 'error', error: userMsg });
@@ -2671,8 +2721,11 @@ app.get('/api/my-games', async (req, res) => {
 const luauJobs = new Map<string, { status: string; result?: Record<string, unknown>; error?: string }>();
 
 app.post('/ai/generate-game-luau', (req, res) => {
-  const { prompt, creatorName = 'Player' } = req.body as { prompt: string; creatorName?: string };
+  const { prompt, creatorName: rawLuauCreator = 'Player' } = req.body as { prompt: string; creatorName?: string };
   if (!prompt?.trim()) { res.status(400).json({ error: 'prompt required' }); return; }
+  const creatorName = safeDisplayName(rawLuauCreator, req.ip ?? '');
+  const luauCheck = moderationCheck(prompt, 'prompt', { id: `ip:${req.ip}`, name: creatorName });
+  if (!luauCheck.ok) { res.status(400).json({ error: luauCheck.userMessage }); return; }
 
   const jobId = randomUUID();
   const callerIp = req.ip ?? '';
@@ -2742,135 +2795,6 @@ app.get('/ai/generate-game-luau/status/:jobId', (req, res) => {
   const job = luauJobs.get(req.params.jobId);
   if (!job) { res.status(404).json({ error: 'Job not found' }); return; }
   res.json(job);
-});
-
-// POST /ai/logic-graph — natural-language → LogicGraph for the Custom Logic panel.
-// The React editor's "Describe with AI" field sends {objectId, prompt}; Claude
-// returns a graph that React drops into the visual node editor. The schema is
-// strictly constrained so generated graphs round-trip through the same React
-// state and Unity bridge as hand-built ones.
-//
-// Wire format (must match CONDITION_CATALOG / ACTION_CATALOG in CreateScreen.tsx):
-//   { nodes: [
-//       { id, kind: 'execute',   params: {} },
-//       { id, kind: 'condition', type: 'enterZone'|'healthBelow'|'timer'|'collision'|'destroyed'|'gameStart', params: {...} },
-//       { id, kind: 'action',    type: 'changeBehavior'|'addForce'|'attachObject'|'cameraLookAt'|'spawn'|'playSound'|'showMessage'|'awardPoints', params: {...} },
-//     ] }
-//
-// Tighter rate limit than the game-forge route — this is interactive and a
-// single misfire costs ~$0.01 of Claude usage, so 12/min/IP is plenty.
-const LOGIC_GRAPH_SYSTEM = `You convert a single-sentence description of an object's behavior into a Pludo "logic graph" — a top-to-bottom chain that fires actions when conditions are met.
-
-Output ONLY a JSON object matching this exact shape (no prose, no markdown fences):
-{
-  "nodes": [
-    { "id": "execute", "kind": "execute", "params": {} },
-    { "id": "<stable id>", "kind": "condition", "type": "<one of: enterZone|healthBelow|timer|collision|destroyed|gameStart>", "params": { /* see below */ } },
-    { "id": "<stable id>", "kind": "action",    "type": "<one of: changeBehavior|addForce|attachObject|cameraLookAt|spawn|playSound|showMessage|awardPoints>", "params": { /* see below */ } }
-  ]
-}
-
-Rules:
-- The first node MUST be the execute root exactly as shown.
-- Conditions are AND-joined. Actions fire in order when every condition is satisfied.
-- ALL param values are strings. Numbers go in as their string form ("50", "3.5"). Booleans as "true"/"false".
-- Use stable ids like "cond_1", "act_1" — never reuse the same id twice.
-- Choose the SIMPLEST graph that captures the intent. Don't invent conditions or actions the user didn't ask for.
-- If the user prompt makes no sense for a behavior graph, return { "nodes": [{ "id": "execute", "kind": "execute", "params": {} }] }.
-
-Param keys per type:
-- enterZone:      {}
-- healthBelow:    { "threshold": "<percent>" }
-- timer:          { "seconds": "<number>" }
-- collision:      { "tag": "<tag>" }
-- destroyed:      {}
-- gameStart:      {}
-- changeBehavior: { "state": "Guard"|"Follow"|"Flee" }
-- addForce:       { "x": "<num>", "y": "<num>", "z": "<num>" }
-- attachObject:   { "target": "<name>", "offset": "<x,y,z>" }
-- cameraLookAt:   { "target": "<name>" }
-- spawn:          { "asset": "<name>" }
-- playSound:      { "name": "<sound>" }
-- showMessage:    { "text": "<message>" }
-- awardPoints:    { "points": "<number>" }`;
-
-const CONDITION_TYPES = new Set(['enterZone', 'healthBelow', 'timer', 'collision', 'destroyed', 'gameStart']);
-const ACTION_TYPES    = new Set(['changeBehavior', 'addForce', 'attachObject', 'cameraLookAt', 'spawn', 'playSound', 'showMessage', 'awardPoints']);
-
-type AiLogicNode = { id: string; kind: 'execute' | 'condition' | 'action'; type?: string; params: Record<string, string> };
-type AiLogicGraph = { nodes: AiLogicNode[] };
-
-// Strict shape filter — keep only well-formed nodes so a hallucinated type
-// can't crash the React panel when it tries to look up the catalog entry.
-function sanitizeLogicGraph(raw: unknown): AiLogicGraph {
-  const fallback: AiLogicGraph = { nodes: [{ id: 'execute', kind: 'execute', params: {} }] };
-  if (!raw || typeof raw !== 'object') return fallback;
-  const arr = (raw as { nodes?: unknown }).nodes;
-  if (!Array.isArray(arr)) return fallback;
-  const cleaned: AiLogicNode[] = [{ id: 'execute', kind: 'execute', params: {} }];
-  let i = 0;
-  for (const n of arr) {
-    if (!n || typeof n !== 'object') continue;
-    const node = n as { id?: unknown; kind?: unknown; type?: unknown; params?: unknown };
-    const kind = node.kind === 'condition' || node.kind === 'action' ? node.kind : null;
-    if (!kind) continue;
-    const type = typeof node.type === 'string' ? node.type : '';
-    if (kind === 'condition' && !CONDITION_TYPES.has(type)) continue;
-    if (kind === 'action'    && !ACTION_TYPES.has(type))    continue;
-    const params: Record<string, string> = {};
-    if (node.params && typeof node.params === 'object') {
-      for (const [k, v] of Object.entries(node.params as Record<string, unknown>)) {
-        if (typeof k !== 'string') continue;
-        params[k] = v == null ? '' : String(v);
-      }
-    }
-    const id = typeof node.id === 'string' && node.id ? node.id : `${kind}_${++i}`;
-    cleaned.push({ id, kind, type, params });
-  }
-  return { nodes: cleaned };
-}
-
-app.post('/ai/logic-graph', rateLimit(60_000, 12), async (req, res) => {
-  const { objectId = '', prompt = '' } = (req.body ?? {}) as { objectId?: string; prompt?: string };
-  const userPrompt = String(prompt ?? '').trim().slice(0, 500);
-  if (!userPrompt) { res.status(400).json({ error: 'prompt required' }); return; }
-
-  try {
-    const msg = await anthropic.messages.create({
-      model: 'claude-opus-4-7',
-      max_tokens: 1500,
-      system: LOGIC_GRAPH_SYSTEM,
-      messages: [{
-        role: 'user',
-        content: `Object: ${String(objectId).slice(0, 80) || 'Selected object'}\nBehavior: ${userPrompt}`,
-      }],
-    });
-    const raw = msg.content[0]?.type === 'text' ? msg.content[0].text : '';
-    let parsed: unknown;
-    try {
-      const fence = raw.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-      const jsonStr = fence ? fence[1] : (raw.match(/\{[\s\S]*\}/)?.[0] ?? raw);
-      parsed = JSON.parse(jsonStr);
-    } catch {
-      res.status(500).json({ error: 'AI returned invalid JSON' });
-      return;
-    }
-    const graph = sanitizeLogicGraph(parsed);
-
-    const inTok    = msg.usage?.input_tokens  ?? 0;
-    const outTok   = msg.usage?.output_tokens ?? 0;
-    const costUsd  = (inTok * 3 + outTok * 15) / 1_000_000;
-    console.log(`[logic-graph] ${inTok} in + ${outTok} out → $${costUsd.toFixed(4)} (obj '${objectId}', ${graph.nodes.length} nodes)`);
-
-    res.json({ graph });
-  } catch (err) {
-    const m = String((err as Error)?.message ?? err);
-    const userMsg = m.includes('credit balance') ? 'Add Anthropic credits at console.anthropic.com'
-      : m.includes('401') ? 'Invalid Anthropic API key'
-      : 'AI generation failed';
-    console.error('[logic-graph]', m);
-    res.status(500).json({ error: userMsg });
-  }
 });
 
 // POST /games  — save a game (called by PludoApiClient after generation)
@@ -2944,13 +2868,16 @@ const meshyJobs = new Map<string, MeshyJob>();
 
 // POST /api/meshy/generate  { prompt, refine? }
 // Returns a jobId immediately; poll /api/meshy/status/:jobId for results.
-app.post('/api/meshy/generate', (req, res) => {
+app.post('/api/meshy/generate', async (req, res) => {
   if (!process.env.MESHY_API_KEY) {
     res.status(503).json({ error: 'MESHY_API_KEY not configured' });
     return;
   }
   const { prompt, refine = false } = req.body as { prompt: string; refine?: boolean };
   if (!prompt?.trim()) { res.status(400).json({ error: 'prompt required' }); return; }
+  const meshyActor = { id: `ip:${req.ip}` };
+  const meshyCheck = await checkGenerationPrompt(prompt, 'asset_prompt', meshyActor, { ai: true });
+  if (!meshyCheck.ok) { res.status(400).json({ error: meshyCheck.userMessage }); return; }
 
   const jobId = randomUUID();
   meshyJobs.set(jobId, { status: 'pending' });
@@ -2961,6 +2888,8 @@ app.post('/api/meshy/generate', (req, res) => {
       meshyJobs.set(jobId, { status: 'preview' });
       const previewId = await createPreview(prompt.trim());
       const previewTask = await waitForTask(previewId, 120_000);
+      const look = await checkModelThumbnail(previewTask.thumbnail_url, prompt, meshyActor, { type: 'asset', id: previewId });
+      if (!look.ok) { meshyJobs.set(jobId, { status: 'error', error: look.userMessage }); return; }
       if (!refine) {
         meshyJobs.set(jobId, {
           status: 'done',
@@ -3008,6 +2937,17 @@ app.post('/api/game/:id/publish', async (req, res) => {
     if (row) game = dbRowToGame(row);
   }
   if (!game) { res.status(404).json({ error: 'Game not found' }); return; }
+
+  // ── Moderation gate: title + description (lexicon + AI review) ─────────────
+  const publisherId = userAccessToken ? userIdFromJwt(userAccessToken) : '';
+  const verdict = await checkPublish(game.title, game.description, { id: publisherId || `ip:${req.ip}`, name: game.creatorName }, String(id));
+  if (!verdict.ok) {
+    res.status(422).json({ error: verdict.userMessage ?? 'This game doesn’t meet our community guidelines.', moderation: true });
+    return;
+  }
+  game.title = verdict.title;
+  game.description = verdict.description;
+
   const publishedAt = new Date();
   const snapshotPatch: Record<string, unknown> = {
     is_published: true,
@@ -3267,8 +3207,16 @@ app.post('/api/game/:id/comment', async (req, res) => {
     req.body as { userAccessToken?: string; userName?: string; body?: string };
   const me = userAccessToken ? userIdFromJwt(userAccessToken) : '';
   if (!me) { res.status(401).json({ error: 'sign-in required' }); return; }
-  const trimmed = String(body).trim().slice(0, 500);
-  if (!trimmed) { res.status(400).json({ error: 'body required' }); return; }
+  if (!String(body).trim()) { res.status(400).json({ error: 'body required' }); return; }
+  const muted = moderationStrikes.mutedFor(me);
+  if (muted > 0) { res.status(429).json({ error: `You’re temporarily muted for ${Math.ceil(muted / 60_000)} min.` }); return; }
+  const commentCheck = moderationCheck(body, 'comment', { id: me, name: userName }, { targetType: 'game', targetId: String(id) });
+  if (!commentCheck.ok) {
+    moderationStrike(me, commentCheck);
+    res.status(422).json({ error: commentCheck.userMessage ?? 'Comment blocked by moderation.' });
+    return;
+  }
+  const trimmed = commentCheck.text.slice(0, 500);
 
   const r = await fetch(`${SUPABASE_URL}/rest/v1/game_comments`, {
     method: 'POST',
@@ -3276,7 +3224,7 @@ app.post('/api/game/:id/comment', async (req, res) => {
       apikey: SB_SERVICE_KEY, Authorization: `Bearer ${SB_SERVICE_KEY}`,
       'Content-Type': 'application/json', Prefer: 'return=representation',
     },
-    body: JSON.stringify({ game_id: id, user_id: me, user_name: userName.slice(0, 64) || null, body: trimmed }),
+    body: JSON.stringify({ game_id: id, user_id: me, user_name: userName ? safeDisplayName(userName, me) : null, body: trimmed }),
   });
   if (!r.ok) {
     console.error('[comment] insert failed:', r.status, await r.text());
@@ -3347,7 +3295,7 @@ wss.on('connection', (ws, req) => {
       const room = rooms.get(gameId)!;
       player = {
         id: playerId, ws,
-        username: String(msg.username ?? 'Player'),
+        username: safeDisplayName(msg.username ?? 'Player', playerId),
         avatarConfig: msg.avatarConfig ?? {},
         gameId, x: 0, y: 0, z: 0, rotY: 0,
       };
@@ -3371,8 +3319,9 @@ wss.on('connection', (ws, req) => {
       broadcast(gameId, playerId, { type: 'move', playerId, x: player.x, y: player.y, z: player.z, rotY: player.rotY });
 
     } else if (msg.type === 'chat' && player) {
-      const message = String(msg.message ?? '').slice(0, 120);
-      broadcast(gameId, null, { type: 'chat', playerId, username: player.username, message });
+      const mod = moderationCheck(String(msg.message ?? '').slice(0, 200), 'chat', { id: playerId, name: player.username });
+      if (!mod.ok) { ws.send(JSON.stringify({ type: 'chat_rejected', reason: mod.userMessage })); return; }
+      broadcast(gameId, null, { type: 'chat', playerId, username: player.username, message: mod.text });
     }
   });
 
@@ -3495,7 +3444,7 @@ gameWss.on('connection', (ws, req) => {
       try {
         const room = await roomManager.getOrCreateRoom(roomKey, scriptToRun, editorOverlay);
         roomId   = room.id;
-        clientId = room.addClient(ws, String(msg.username ?? 'Player'));
+        clientId = room.addClient(ws, safeDisplayName(msg.username ?? 'Player', `${clientIp}:${msg.username ?? ''}`), clientIp);
         ws.send(JSON.stringify({ type: 'joined', clientId, roomId }));
       } catch (e) {
         ws.send(JSON.stringify({ type: 'error', message: String((e as Error).message) }));
@@ -3540,6 +3489,51 @@ gameWss.on('connection', (ws, req) => {
   }, 15_000);
   ws.on('close', () => clearInterval(idleTimer));
 });
+
+// ── Moderation: check / report / admin queue ─────────────────────────────────
+
+app.use(moderationRouter({
+  userIdFromJwt,
+  rateLimit,
+  async snapshotFor(targetType, targetId) {
+    if (targetType === 'game') {
+      const g = games.get(Number(targetId));
+      return g ? `title: ${g.publishedTitle || g.title}\ndescription: ${g.publishedDescription || g.description}\ncreator: ${g.creatorName}` : null;
+    }
+    if (targetType === 'avatar_item') {
+      const it = avatarItems.get(Number(targetId));
+      return it ? `name: ${it.name}\ndescription: ${it.description ?? ''}\nmodel: ${it.modelUrl ?? ''}\nthumb: ${it.thumbnailUrl ?? ''}` : null;
+    }
+    if (targetType === 'chat') {
+      // targetId = "<roomId>:<clientId>:<ts>" as delivered in the chat broadcast
+      const [roomId, cId, ts] = targetId.split(':');
+      return roomManager.getRoom(roomId)?.findChat(cId, Number(ts)) ?? null;
+    }
+    if ((targetType === 'comment' || targetType === 'user') && SUPABASE_URL) {
+      const url = targetType === 'comment'
+        ? `${SUPABASE_URL}/rest/v1/game_comments?id=eq.${encodeURIComponent(targetId)}&select=user_id,user_name,body`
+        : `${SUPABASE_URL}/rest/v1/users?id=eq.${encodeURIComponent(targetId)}&select=id,username,display_name`;
+      const r = await fetch(url, { headers: { apikey: SB_SERVICE_KEY, Authorization: `Bearer ${SB_SERVICE_KEY}` } });
+      if (!r.ok) return null;
+      const rows = await r.json() as Array<Record<string, unknown>>;
+      return rows[0] ? JSON.stringify(rows[0]) : null;
+    }
+    return null;
+  },
+  async unpublishGame(id) {
+    let game = games.get(id);
+    if (!game && SUPABASE_URL) {
+      const row = await sbGetById('forge_games', id).catch(() => null);
+      if (row) { game = dbRowToGame(row); games.set(id, game); }
+    }
+    if (!game) return false;
+    game.published = false;
+    if (SUPABASE_URL) await sbPatch('forge_games', id, { is_published: false, updated_at: new Date().toISOString() }, SB_SERVICE_KEY).catch(e => console.error('[moderation] unpublish persist failed', e));
+    return true;
+  },
+}));
+
+loadModerationState().catch(err => console.warn('[moderation] state load failed:', err));
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 

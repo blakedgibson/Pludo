@@ -1,15 +1,29 @@
 {
   "dependencies": {
+    "com.unity.cloud.gltfast": "6.14.1",
+    "com.ivanmurzak.unity.mcp": "0.66.1",
+    "com.nosuchstudio.rtltmpro": "4.0.0",
+    "com.reactunity.core": "0.21.2",
+    "com.reactunity.jint": "0.21.0",
+    "com.reactunity.quickjs": "0.19.0",
+    "com.unity.ai.assistant": "2.6.0-pre.1",
     "com.unity.ai.navigation": "2.0.12",
     "com.unity.collab-proxy": "2.12.4",
-    "com.unity.ide.rider": "3.0.39",
+    "com.unity.device-simulator.devices": "1.0.1",
+    "com.unity.editorcoroutines": "1.0.0",
+    "com.unity.ide.rider": "3.0.40",
     "com.unity.ide.visualstudio": "2.0.27",
     "com.unity.inputsystem": "1.19.0",
     "com.unity.multiplayer.center": "1.0.1",
+    "com.unity.nuget.mono-cecil": "1.10.2",
+    "com.unity.nuget.newtonsoft-json": "3.0.2",
+    "com.unity.purchasing": "5.2.1",
     "com.unity.render-pipelines.universal": "17.4.0",
     "com.unity.test-framework": "1.6.0",
+    "com.unity.textmeshpro": "3.2.0-pre.10",
     "com.unity.timeline": "1.8.12",
     "com.unity.ugui": "2.0.0",
+    "com.unity.vectorgraphics": "3.0.0-preview.7",
     "com.unity.visualscripting": "1.9.11",
     "com.unity.modules.accessibility": "1.0.0",
     "com.unity.modules.adaptiveperformance": "1.0.0",
@@ -45,5 +59,22 @@
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
     "com.unity.modules.xr": "1.0.0"
-  }
+  },
+  "scopedRegistries": [
+    {
+      "name": "package.openupm.com",
+      "url": "https://package.openupm.com",
+      "scopes": [
+        "com.ivanmurzak",
+        "extensions.unity",
+        "com.reactunity",
+        "com.reactunity.jint",
+        "com.nosuchstudio.rtltmpro",
+        "org.nuget.com.ivanmurzak",
+        "org.nuget.microsoft",
+        "org.nuget.system",
+        "org.nuget.r3"
+      ]
+    }
+  ]
 }
