@@ -141,3 +141,7 @@ native-shell/.claude/settings.local.json
 # Cloudflare R2 credentials for the Unity client (see CloudflareR2Secrets.example.json)
 /Assets/Resources/Config/CloudflareR2Secrets.json
 /Assets/Resources/Config/CloudflareR2Secrets.json.meta
+
+# Photon SDK — kept local, not in the repo
+/Assets/Photon/
+/Assets/Photon.meta
