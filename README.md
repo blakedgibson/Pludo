@@ -64,10 +64,14 @@ Apply the SQL files in `supabase/migrations/` in order, using the Supabase CLI o
 
 ### Unity client
 
-1. Open the project root in Unity 6000.4.3f1.
-2. Copy `Assets/Resources/Config/CloudflareR2Secrets.example.json` to `CloudflareR2Secrets.json` in the same folder and fill it in (it's gitignored).
-3. Set the Supabase URL and anon key in `Assets/Resources/Config/SupabaseConfig_Dev.asset`.
-4. Press Play.
+1. **Install Photon Fusion 2.0.12 first.** The SDK isn't included in this repo because Photon's license doesn't allow redistributing it. The project won't compile without it: `Assets/Scripts/Services/Multiplayer/` uses Fusion directly.
+   - Download Fusion 2.0.12 from the [Photon SDK downloads page](https://doc.photonengine.com/fusion/current/getting-started/sdk-download) (or the Unity Asset Store) and import it so it lands in `Assets/Photon/`.
+   - Create a Fusion app in the [Photon dashboard](https://dashboard.photonengine.com/) and paste its App ID into `Assets/Photon/Fusion/Resources/PhotonAppSettings.asset` (or use **Tools ▸ Fusion ▸ Realtime Settings**).
+   - `Assets/Photon/` is gitignored, so your SDK and App ID stay local.
+2. Open the project root in Unity 6000.4.3f1.
+3. Copy `Assets/Resources/Config/CloudflareR2Secrets.example.json` to `CloudflareR2Secrets.json` in the same folder and fill it in (it's gitignored).
+4. Set the Supabase URL and anon key in `Assets/Resources/Config/SupabaseConfig_Dev.asset`.
+5. Press Play.
 
 ### React UI (inside Unity)
 
