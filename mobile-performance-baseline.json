@@ -1,0 +1,226 @@
+{
+  "generated": "2026-05-05",
+  "project": "Pludo",
+  "purpose": "Baseline benchmarks for all future Unity build comparisons. Any build that regresses beyond the thresholds defined here should be flagged before shipping.",
+  "methodology": "Targets derived from code analysis, device spec research, and industry-standard mobile game benchmarks. All ACTUAL values require physical device validation — replace nulls with measured results.",
+
+  "thresholds": {
+    "min_fps_gameplay":        30,
+    "min_fps_hotreload":       20,
+    "max_load_to_first_frame_ms": 2000,
+    "max_load_to_interactive_ms": 5000,
+    "max_memory_growth_per_session_mb": 10,
+    "gpu_memory_baseline_return_s": 5
+  },
+
+  "device_categories": [
+    {
+      "category": "small_phone_ios",
+      "representative_device": "iPhone SE 3rd gen",
+      "chip": "A15 Bionic",
+      "ram_gb": 4,
+      "resolution": "1334x750",
+      "dpi": 326,
+      "os": "iOS 16+",
+      "benchmarks": {
+        "load_to_first_frame_ms":   { "target": 1800, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "load_to_interactive_ms":   { "target": 4500, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_average":              { "target": 30,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_min":                  { "target": 24,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_max":                  { "target": 60,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_hotreload":            { "target": 20,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_start_mb":       { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_60s_mb":         { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_3min_mb":        { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_after_teardown_mb": { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "gpu_memory_peak_mb":       { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "gpu_memory_after_exit_mb": { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" }
+      },
+      "fps_log_interval_s": 10
+    },
+    {
+      "category": "standard_phone_ios",
+      "representative_device": "iPhone 14",
+      "chip": "A15 Bionic",
+      "ram_gb": 6,
+      "resolution": "2532x1170",
+      "dpi": 460,
+      "os": "iOS 17+",
+      "benchmarks": {
+        "load_to_first_frame_ms":   { "target": 1500, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "load_to_interactive_ms":   { "target": 4000, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_average":              { "target": 60,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_min":                  { "target": 30,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_max":                  { "target": 60,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_hotreload":            { "target": 30,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_start_mb":       { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_60s_mb":         { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_3min_mb":        { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_after_teardown_mb": { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "gpu_memory_peak_mb":       { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "gpu_memory_after_exit_mb": { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" }
+      },
+      "fps_log_interval_s": 10
+    },
+    {
+      "category": "large_phone_ios",
+      "representative_device": "iPhone 14 Pro Max",
+      "chip": "A16 Bionic",
+      "ram_gb": 6,
+      "resolution": "2796x1290",
+      "dpi": 460,
+      "os": "iOS 18",
+      "benchmarks": {
+        "load_to_first_frame_ms":   { "target": 1500, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "load_to_interactive_ms":   { "target": 4000, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_average":              { "target": 60,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_min":                  { "target": 30,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_max":                  { "target": 60,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_hotreload":            { "target": 30,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_start_mb":       { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_60s_mb":         { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_3min_mb":        { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_after_teardown_mb": { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "gpu_memory_peak_mb":       { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "gpu_memory_after_exit_mb": { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" }
+      },
+      "fps_log_interval_s": 10
+    },
+    {
+      "category": "small_phone_android",
+      "representative_device": "Generic Android ~720x1280",
+      "chip": "Snapdragon 600-series or equiv",
+      "ram_gb": 3,
+      "resolution": "720x1280",
+      "dpi": 294,
+      "os": "Android 12",
+      "benchmarks": {
+        "load_to_first_frame_ms":   { "target": 2500, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "load_to_interactive_ms":   { "target": 6000, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_average":              { "target": 30,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_min":                  { "target": 20,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_max":                  { "target": 60,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_hotreload":            { "target": 20,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_start_mb":       { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_60s_mb":         { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_3min_mb":        { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_after_teardown_mb": { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "gpu_memory_peak_mb":       { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "gpu_memory_after_exit_mb": { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" }
+      },
+      "fps_log_interval_s": 10
+    },
+    {
+      "category": "large_phone_android",
+      "representative_device": "Samsung S23 Ultra or equiv",
+      "chip": "Snapdragon 8 Gen 2",
+      "ram_gb": 12,
+      "resolution": "1440x3088",
+      "dpi": 500,
+      "os": "Android 13–15",
+      "benchmarks": {
+        "load_to_first_frame_ms":   { "target": 1500, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "load_to_interactive_ms":   { "target": 4000, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_average":              { "target": 60,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_min":                  { "target": 30,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_max":                  { "target": 120,  "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_hotreload":            { "target": 30,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_start_mb":       { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_60s_mb":         { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_3min_mb":        { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_after_teardown_mb": { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "gpu_memory_peak_mb":       { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "gpu_memory_after_exit_mb": { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" }
+      },
+      "fps_log_interval_s": 10
+    },
+    {
+      "category": "ipad_mini",
+      "representative_device": "iPad Mini 6th gen",
+      "chip": "A15 Bionic",
+      "ram_gb": 4,
+      "resolution": "2266x1488",
+      "dpi": 326,
+      "os": "iOS 16+",
+      "benchmarks": {
+        "load_to_first_frame_ms":   { "target": 1500, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "load_to_interactive_ms":   { "target": 4000, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_average":              { "target": 60,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_min":                  { "target": 30,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_max":                  { "target": 60,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_hotreload":            { "target": 30,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_start_mb":       { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_60s_mb":         { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_3min_mb":        { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_after_teardown_mb": { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "gpu_memory_peak_mb":       { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "gpu_memory_after_exit_mb": { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" }
+      },
+      "fps_log_interval_s": 10
+    },
+    {
+      "category": "ipad_standard",
+      "representative_device": "iPad 10th gen",
+      "chip": "A14 Bionic",
+      "ram_gb": 4,
+      "resolution": "2360x1640",
+      "dpi": 264,
+      "os": "iOS 16+",
+      "benchmarks": {
+        "load_to_first_frame_ms":   { "target": 1800, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "load_to_interactive_ms":   { "target": 4500, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_average":              { "target": 60,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_min":                  { "target": 30,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_max":                  { "target": 60,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_hotreload":            { "target": 30,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_start_mb":       { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_60s_mb":         { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_3min_mb":        { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_after_teardown_mb": { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "gpu_memory_peak_mb":       { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "gpu_memory_after_exit_mb": { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" }
+      },
+      "fps_log_interval_s": 10
+    },
+    {
+      "category": "ipad_pro",
+      "representative_device": "iPad Pro 12.9in 6th gen",
+      "chip": "M2",
+      "ram_gb": 8,
+      "resolution": "2732x2048",
+      "dpi": 264,
+      "os": "iOS 17+",
+      "benchmarks": {
+        "load_to_first_frame_ms":   { "target": 1000, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "load_to_interactive_ms":   { "target": 3000, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_average":              { "target": 120,  "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_min":                  { "target": 60,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_max":                  { "target": 120,  "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "fps_hotreload":            { "target": 60,   "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_start_mb":       { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_60s_mb":         { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_at_3min_mb":        { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "memory_after_teardown_mb": { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "gpu_memory_peak_mb":       { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" },
+        "gpu_memory_after_exit_mb": { "target": null, "actual": null, "status": "NEEDS_MEASUREMENT" }
+      },
+      "fps_log_interval_s": 10
+    }
+  ],
+
+  "regression_instructions": {
+    "how_to_run": [
+      "1. Build the Unity project for the target platform (iOS/Android) in Release/Distribution mode.",
+      "2. On each representative device, launch a standard 6-asset game session.",
+      "3. Capture fps_log every 10 seconds for 60 seconds using Unity Profiler or a Debug.Log timer in LuauGameRunner.",
+      "4. Record memory via Xcode Instruments (iOS) or Android Studio Memory Profiler (Android) at t=0, t=60s, t=180s.",
+      "5. Exit the session; wait 5s; record post-teardown GPU memory.",
+      "6. Repeat 5 consecutive sessions; confirm memory_after_teardown_mb is stable across runs.",
+      "7. Compare all actual values against the targets in this file; flag any that exceed target by >10%."
+    ],
+    "fps_log_format": {
+      "example": { "session_id": 1, "device": "iphone_14", "t_s": 10, "fps": 58.3 },
+      "append_to": "mobile-performance-baseline.json under device_categories[n].fps_samples"
+    }
+  }
+}

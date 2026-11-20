@@ -1,0 +1,24 @@
+{
+  "name": "pludo-react-ui",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "start": "react-unity-scripts start",
+    "build": "react-unity-scripts build"
+  },
+  "dependencies": {
+    "@reactunity/renderer": "0.21.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@reactunity/scripts": "0.21.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.0.0"
+  },
+  "reactUnity": {
+    "outDir": "../Assets/Resources/react",
+    "port": 3000
+  }
+}

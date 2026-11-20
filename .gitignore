@@ -105,3 +105,39 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# ---- Pludo additions ----
+# macOS
+.DS_Store
+
+# Rider / VS Code solution formats not covered above
+*.slnx
+.idea/
+
+# Node / JS tooling (api-server, react, native-shell)
+node_modules/
+dist/
+.expo/
+
+# Secrets — never commit; use .env.example as a template
+.env
+.env.*
+!.env.example
+
+# Unity crash-recovery scenes
+/[Aa]ssets/_Recovery/
+/[Aa]ssets/_Recovery.meta
+
+# Build outputs
+/Unity_Web_Export/
+/native-shell/unity/
+/native-shell/ios/
+
+# Local agent / editor state
+.claude/settings.local.json
+.claude/worktrees/
+native-shell/.claude/settings.local.json
+
+# Cloudflare R2 credentials for the Unity client (see CloudflareR2Secrets.example.json)
+/Assets/Resources/Config/CloudflareR2Secrets.json
+/Assets/Resources/Config/CloudflareR2Secrets.json.meta

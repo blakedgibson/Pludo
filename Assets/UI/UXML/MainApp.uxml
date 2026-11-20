@@ -1,0 +1,43 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Style src="../USS/MobileStyles.uss" />
+
+    <ui:VisualElement name="root" class="root-container">
+
+        <ui:VisualElement name="screen-container" class="screen-container" />
+
+        <ui:VisualElement name="bottom-nav" class="bottom-nav">
+
+            <ui:Button name="tab-discover" class="nav-tab tab-active">
+                <ui:VisualElement class="nav-tab-indicator" />
+                <ui:VisualElement class="tab-icon tab-icon-home" />
+                <ui:Label class="tab-label" text="Home" />
+            </ui:Button>
+
+            <ui:Button name="tab-games" class="nav-tab">
+                <ui:VisualElement class="nav-tab-indicator" />
+                <ui:VisualElement class="tab-icon tab-icon-search" />
+                <ui:Label class="tab-label" text="Explore" />
+            </ui:Button>
+
+            <ui:Button name="tab-avatar" class="nav-tab">
+                <ui:VisualElement class="nav-tab-indicator" />
+                <ui:VisualElement class="tab-icon tab-icon-star" />
+                <ui:Label class="tab-label" text="Avatar" />
+            </ui:Button>
+
+            <ui:Button name="tab-chat" class="nav-tab">
+                <ui:VisualElement class="nav-tab-indicator" />
+                <ui:VisualElement class="tab-icon tab-icon-message" />
+                <ui:Label class="tab-label" text="Chat" />
+            </ui:Button>
+
+            <ui:Button name="tab-create" class="nav-tab">
+                <ui:VisualElement class="nav-tab-indicator" />
+                <ui:VisualElement class="tab-icon tab-icon-user" />
+                <ui:Label class="tab-label" text="Create" />
+            </ui:Button>
+
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>

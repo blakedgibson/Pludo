@@ -1,0 +1,138 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Style src="../USS/MobileStyles.uss" />
+
+    <ui:VisualElement name="discover-root" class="screen-root">
+
+        <ui:ScrollView name="discover-scroll" class="scroll-content"
+                       vertical="true" horizontal="false"
+                       vertical-scroller-visibility="Hidden"
+                       horizontal-scroller-visibility="Hidden"
+                       mouse-wheel-scroll-size="120">
+
+            <!-- Home top bar -->
+            <ui:VisualElement class="home-topbar">
+                <ui:Label class="home-topbar-title" text="Home" />
+            </ui:VisualElement>
+
+            <!-- Stories strip -->
+            <ui:ScrollView name="friends-scroll" class="friends-scroll"
+                           horizontal="true" vertical="false"
+                           vertical-scroller-visibility="Hidden"
+                           horizontal-scroller-visibility="Hidden"
+                           mouse-wheel-scroll-size="60">
+                <ui:VisualElement name="friends-inner" class="friends-scroll-inner">
+
+                    <!-- "You" story bubble (green ring) — tapping opens add-friend -->
+                    <ui:Button name="add-friend-btn" class="friend-bubble-wrap story-ring-you">
+                        <ui:VisualElement class="friend-ring-outer">
+                            <ui:VisualElement class="friend-ring-gap">
+                                <ui:VisualElement class="friend-circle" style="background-color: rgb(58,58,60);">
+                                    <ui:Label class="friend-initials" text="&#x1F464;" />
+                                </ui:VisualElement>
+                            </ui:VisualElement>
+                        </ui:VisualElement>
+                        <ui:Label class="friend-you-label" text="You" />
+                    </ui:Button>
+
+                    <!-- Friend bubbles injected by controller -->
+                </ui:VisualElement>
+            </ui:ScrollView>
+
+            <!-- Trending Games section -->
+            <ui:VisualElement class="section">
+                <ui:VisualElement class="section-header">
+                    <ui:Label class="section-title" text="Trending games" />
+                    <ui:Button name="games-see-all" class="see-all-btn" text="See all" />
+                </ui:VisualElement>
+                <ui:VisualElement name="games-loading" class="hidden">
+                    <ui:VisualElement class="skeleton-card">
+                        <ui:VisualElement class="skeleton-thumb" />
+                        <ui:VisualElement style="padding:12px; gap:8px;">
+                            <ui:VisualElement class="skeleton-line" />
+                            <ui:VisualElement class="skeleton-line skeleton-line-short" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="skeleton-card">
+                        <ui:VisualElement class="skeleton-thumb" />
+                        <ui:VisualElement style="padding:12px; gap:8px;">
+                            <ui:VisualElement class="skeleton-line" />
+                            <ui:VisualElement class="skeleton-line skeleton-line-short" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="games-error" class="error-box hidden">
+                    <ui:Label class="error-icon" text="&#x26A0;" />
+                    <ui:Label class="error-text" text="Failed to load games" />
+                    <ui:Button name="games-retry" class="retry-btn" text="Retry" />
+                </ui:VisualElement>
+                <ui:VisualElement name="games-empty" class="empty-box hidden">
+                    <ui:Label class="empty-icon" text="&#x1F3AE;" />
+                    <ui:Label class="empty-title" text="No games yet" />
+                </ui:VisualElement>
+                <!-- Horizontal-card game list; CSS handles row layout via #discover-root .game-card -->
+                <ui:VisualElement name="games-list" class="trending-games-inner" />
+            </ui:VisualElement>
+
+            <!-- Hot Items section -->
+            <ui:VisualElement class="section">
+                <ui:VisualElement class="section-header">
+                    <ui:Label class="section-title" text="Hot items" />
+                    <ui:Button name="items-see-all" class="see-all-btn" text="See all" />
+                </ui:VisualElement>
+                <ui:VisualElement name="items-loading" class="items-grid hidden">
+                    <ui:VisualElement class="skeleton-item-card">
+                        <ui:VisualElement class="skeleton-item-thumb" />
+                        <ui:VisualElement style="padding:10px; gap:6px;">
+                            <ui:VisualElement class="skeleton-line" />
+                            <ui:VisualElement class="skeleton-line skeleton-line-short" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="skeleton-item-card">
+                        <ui:VisualElement class="skeleton-item-thumb" />
+                        <ui:VisualElement style="padding:10px; gap:6px;">
+                            <ui:VisualElement class="skeleton-line" />
+                            <ui:VisualElement class="skeleton-line skeleton-line-short" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement name="items-empty" class="empty-box hidden">
+                    <ui:Label class="empty-icon" text="&#x1F4E6;" />
+                    <ui:Label class="empty-title" text="No items yet" />
+                </ui:VisualElement>
+                <!-- Hot items row — 3 equal-width cards -->
+                <ui:VisualElement name="items-grid" class="hot-items-strip" />
+            </ui:VisualElement>
+
+            <ui:VisualElement class="scroll-pad-bottom" />
+        </ui:ScrollView>
+
+        <!-- Add Friend modal (hidden by default) -->
+        <ui:VisualElement name="add-friend-modal" class="hidden">
+            <ui:VisualElement class="modal-backdrop" name="modal-backdrop-dismiss" />
+            <ui:VisualElement class="modal-sheet">
+                <ui:Label class="modal-title" text="Add Friend" />
+                <ui:TextField name="add-search-field" class="modal-input"
+                              placeholder-text="Search by username..." />
+                <ui:VisualElement name="add-search-idle" class="add-search-hint">
+                    <ui:Label class="add-search-hint-text" text="Type to search accounts" />
+                </ui:VisualElement>
+                <ui:VisualElement name="add-search-loading" class="add-search-hint hidden">
+                    <ui:Label class="add-search-hint-text" text="Searching..." />
+                </ui:VisualElement>
+                <ui:VisualElement name="add-search-empty" class="add-search-hint hidden">
+                    <ui:Label class="add-search-hint-text" text="No accounts found" />
+                </ui:VisualElement>
+                <ui:ScrollView name="add-search-results" class="add-results-scroll hidden"
+                               vertical="true" horizontal="false"
+                               vertical-scroller-visibility="Hidden"
+                               horizontal-scroller-visibility="Hidden">
+                    <ui:VisualElement name="add-results-list" />
+                </ui:ScrollView>
+                <ui:Button name="modal-cancel" class="cancel-btn" style="margin-top: 4px;">
+                    <ui:Label class="cancel-btn-text" text="Cancel" />
+                </ui:Button>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>

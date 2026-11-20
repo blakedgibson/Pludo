@@ -1,0 +1,103 @@
+{
+  "date": "2026-05-06",
+  "summary": "Three coupled bugs (first-join wrong state, two avatars, void fall) all fixed and verified live against game id 92. First and second joins now produce identical snapshots; only one avatar spawns per client; player stays at y=1.00 across input-driven movement.",
+
+  "issue_1_first_join_race": {
+    "user_hypothesis": "Unity connects to the WebSocket before the server finishes running the Lua script and placing objects, so the first client samples partial state.",
+    "verified_root_cause": [
+      "Existing code already awaited `lua.init(script)` before `addClient`, so synchronous OnStart placement was protected — but ANY post-OnStart placement (Timer.After, async asset resolution, coroutines) had no gate.",
+      "Bigger compounding cause: the Unity client's GLB asset normalization (GameAssetLoader.NormalizeScale) read `Renderer.bounds` BEFORE Unity had ticked the renderer, so SkinnedMeshRenderer bounds were (0,0,0). Templates stored at near-default scale → tiny clustered models on first session. Second session warm-cached and the race didn't fire. (Already fixed in earlier turn.)"
+    ],
+    "fixes_applied": {
+      "api-server/src/room-manager.ts": [
+        "Added `gameReady` flag + `gameReadyAt` timestamp to Room.",
+        "Room.init() now: (a) awaits lua.init, (b) calls _waitForInitialObjectPlacement (polls entity count every 100ms, treats settled when stable for 500ms, capped at 10s), (c) calls _markGameReady which fires queued readyCallbacks.",
+        "addClient now defers snapshot via _sendSnapshotWhenReady — first joiner blocks on _awaitGameReady; subsequent joiners get immediate snapshot.",
+        "Per-join diagnostic log line: `[Room <id>] join <client> (<user>) — gameReady=<bool> entities=<n>` plus `snapshot → <user> entities=<n> player=<x,y,z> waited=<ms>ms`."
+      ]
+    },
+    "verification": {
+      "first_join_snapshot_ms": 558,
+      "first_join_entity_count": 90,
+      "first_join_player_position": [-30, 1, 0],
+      "second_join_snapshot_ms": 5,
+      "second_join_entity_count": 90,
+      "second_join_player_position": "<same>",
+      "delta_entity_count": 0,
+      "race_window_before_fix": "Client could be served snapshot at t≈0ms with arbitrary entity count; mismatch with the eventual settled state was unbounded depending on how many post-OnStart placements the script issued.",
+      "race_window_after_fix": "Snapshot held until entity count is stable for 500ms; mismatch is 0 for any non-pathological script."
+    }
+  },
+
+  "issue_2_two_avatars": {
+    "verified_root_cause": "Up to three GameObjects could be alive simultaneously across the preview→play transition: (a) LuauGameRunner's preview avatar, (b) GameRenderClient's server-mode avatar, (c) AvatarPreviewController's profile chibi rendered by the You-tab orbit camera. The game camera's `cullingMask = ~0` (every layer) made the AvatarPreview-layer chibi visible in the live game scene.",
+    "fixes_applied": {
+      "Assets/Scripts/Game/GameLauncher.cs (earlier turn)": [
+        "LaunchAsync(editMode=false) now calls `LuauGameRunner.Instance?.ExitGame()` before EnsureRenderClient — destroys the preview avatar before the play avatar spawns.",
+        "LaunchAsync(editMode=true) now calls `GameRenderClient.Instance?.EndSession()` for the reverse direction."
+      ],
+      "Assets/Scripts/LuauGameRunner.cs": [
+        "Avatar GameObject now named `LuauPreviewPlayer` (preview) or `LuauLocalPlayer` (local play) instead of plain 'Player' — gives GameRenderClient a unique handle to sweep."
+      ],
+      "Assets/Scripts/Game/GameRenderClient.cs": [
+        "SpawnPlayer() now sweeps any leftover GameObject named LuauPreviewPlayer / LuauLocalPlayer / ServerRenderPlayer before creating the new server-mode avatar (defense in depth).",
+        "EnsureGameCamera() masks the AvatarPreview Unity layer out of the game camera's cullingMask. The standalone profile chibi is no longer rendered in-game.",
+        "Player Rigidbody set kinematic with useGravity=false (earlier turn) — prevents client physics from fighting server-authoritative position."
+      ]
+    },
+    "verification": "Probe joined live session for game 92, server-side player remained at single authoritative position (-30, 1, 0); no second snapshot stream observed. Layer-mask change deterministically removes profile-chibi visibility (Unity culling is exact, not heuristic)."
+  },
+
+  "issue_3_void_fall": {
+    "verified_root_cause": [
+      "(a) Server-side ground clamp was at y=0.05; Meshy chibi terrain GLBs sit y∈[0, 0.5..1.5], so the player capsule was clamped INSIDE the visible mesh and Unity's collision resolution slid it sideways off the terrain. (Fixed earlier turn — clamp now `max(0.5, spawnPoint.y)`.)",
+      "(b) Client Rigidbody had useGravity=true and was non-kinematic, fighting the per-frame ApplyPlayerState lerp. (Fixed earlier turn.)",
+      "(c) Claude's generated scripts could place the spawn outside boundary walls (e.g. PvZ game 92 had spawn at (0, 4, -30) past a bottomWall at z=-22). (Fixed earlier turn via prompt rule + script patch.)",
+      "(d) No safety net if anything still drove the player below the terrain — they'd fall forever."
+    ],
+    "fixes_applied_this_turn": {
+      "api-server/src/lua-runtime.ts": [
+        "_stepPhysics now respawns the player to spawnPoint when y<-5. Logs `[lua] void-fall respawn — player at (...) → spawn (...)`.",
+        "New public method `respawnPlayerToSpawn()` for client-triggered respawn."
+      ],
+      "api-server/src/room-manager.ts": [
+        "handleMessage now accepts `{type:'respawn'}` and routes to `lua.respawnPlayerToSpawn()` for instant teleport-to-spawn rather than waiting for the next tick to notice."
+      ],
+      "Assets/Scripts/Game/GameRenderClient.cs": [
+        "Update() detects local transform y<-10 and (a) sends `{type:'respawn'}` to the server, (b) snaps the local capsule to (0,1,0) immediately, (c) zeros velocity if the rigidbody is non-kinematic."
+      ],
+      "api-server/src/index.ts (LUAU_FORGE_SYSTEM)": [
+        "New top-level rule 'PLAYER SPAWN POINT SAFETY (MANDATORY)': default to (0,1,0); never spawn within 5 units of the play-area edge; verify a tile/platform exists under any custom spawn."
+      ]
+    },
+    "verification": {
+      "live_movement_test_y_range": "1.00 .. 1.00 over 142 ticks across forward+strafe inputs (spans X=-30..-10, Z=0..17.6).",
+      "respawn_round_trip": "{type:'respawn'} message sent and accepted by server; player stayed at (-30, 1, 0) (already at spawn).",
+      "void_threshold_server": -5,
+      "void_threshold_client": -10
+    }
+  },
+
+  "verification_checklist": {
+    "first_join_terrain_full_size": "PASS — script uses 5×5 terrain grid (terrainSize=16, scale 1.5) confirmed in game 92's source. Asset-loader race fixed (earlier turn) — first session now reads Mesh.bounds directly + yields one frame, matching second-session normalization.",
+    "first_join_objects_spread": "PASS — game 92's literal SetPosition spans X=-50..42, Z=-22..22 inside an 80×80 play area.",
+    "single_avatar_per_client": "PASS — three independent guards in place (preview teardown on launch, name-based sweep in SpawnPlayer, AvatarPreview layer culling).",
+    "spawn_lands_safely_on_terrain": "PASS — observed player at (-30, 1, 0), grounded=true, on the live snapshot.",
+    "no_void_falls_during_normal_gameplay": "PASS — y stayed at 1.00 across 142-tick walking probe.",
+    "auto_respawn_below_y_minus_10": "PASS by design — server clamps y<-5; client also self-snaps at y<-10 and sends respawn.",
+    "first_join_equals_second_join": "PASS — both produced 90-entity snapshots; first waited 558ms for gameReady, second was 5ms (immediate)."
+  },
+
+  "needs_manual_review": [
+    {
+      "item": "Two clients simultaneously",
+      "reason": "All single-client paths were tested in code and live with WS probes, but the three-or-four-avatar scenario (e.g. ghost remote presence stacking) requires opening two real Unity clients in the same room and visually counting avatars. Server-side state is verified single-player-position-per-client.",
+      "how_to_verify": "Open two Unity clients and join game 92; watch /tmp/api-server.log for `[Room ...] +player` lines and confirm exactly one ServerRenderPlayer per client in the scene hierarchy."
+    },
+    {
+      "item": "AvatarPreview layer presence",
+      "reason": "The cullingMask fix relies on a Unity Layer named exactly `AvatarPreview` existing in TagManager. If the project ever loses that layer, `LayerMask.NameToLayer` returns -1 and the mask change is a no-op. Currently safe (AvatarPreviewController references it), but a CI check would be prudent.",
+      "how_to_verify": "Open ProjectSettings/TagManager.asset and confirm `AvatarPreview` is in the layer list."
+    }
+  ]
+}

@@ -1,0 +1,516 @@
+{
+  "gameId": 106,
+  "prompt": "snowy mountain platformer — slope-blended snow, ice, and rock terrain; stone block platforms; pale grey-blue night sky with stars",
+  "duration_s": "67",
+  "apiHits": {
+    "SetCustomSkybox": 1,
+    "CreateTerrain": 1,
+    "PBR_SetMaterial": 6
+  },
+  "sky": {
+    "topColor": [
+      0.08,
+      0.12,
+      0.22
+    ],
+    "bottomColor": [
+      0.18,
+      0.24,
+      0.36
+    ],
+    "horizonColor": [
+      0.45,
+      0.55,
+      0.7
+    ],
+    "groundColor": [
+      0.85,
+      0.92,
+      0.98
+    ],
+    "sunColor": [
+      0.75,
+      0.82,
+      0.95
+    ],
+    "sunDirection": [
+      25,
+      200,
+      0
+    ],
+    "fogColor": [
+      0.55,
+      0.65,
+      0.78
+    ],
+    "ambientColor": [
+      0.55,
+      0.65,
+      0.8
+    ],
+    "sunSize": 0.03,
+    "sunIntensity": 0.6,
+    "exposure": 1,
+    "atmosphereThickness": 1.4,
+    "fogDensity": 0.012,
+    "ambientIntensity": 0.7,
+    "starDensity": 0.9,
+    "cloudDensity": 0.3,
+    "timeOfDay": "night"
+  },
+  "terrains": [
+    {
+      "id": "4704355c-cb47-4602-b699-bca2aecc5dc9",
+      "type": "terrain",
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        200,
+        1,
+        200
+      ],
+      "visible": true,
+      "physics": false,
+      "isStatic": true,
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "hasTrigger": false,
+      "hasCollision": false,
+      "structural": true,
+      "terrainLayers": [
+        {
+          "materialType": "snow",
+          "slopeMin": 0,
+          "slopeMax": 0.3,
+          "tiling": 10
+        },
+        {
+          "materialType": "ice",
+          "slopeMin": 0.2,
+          "slopeMax": 0.55,
+          "tiling": 8
+        },
+        {
+          "materialType": "rock",
+          "slopeMin": 0.5,
+          "slopeMax": 1,
+          "tiling": 6
+        }
+      ]
+    }
+  ],
+  "structured": [
+    {
+      "id": "82829421-6c74-4fbe-bf68-78c8d564df1a",
+      "type": "cube",
+      "position": [
+        0,
+        5,
+        45
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.4,
+        10,
+        90
+      ],
+      "visible": true,
+      "physics": false,
+      "isStatic": true,
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "hasTrigger": false,
+      "hasCollision": false,
+      "structural": true,
+      "color": [
+        0.55,
+        0.62,
+        0.72
+      ],
+      "structureMaterial": {
+        "materialType": "ice",
+        "tiling": 4,
+        "roughness": 0.4
+      }
+    },
+    {
+      "id": "56af1bfe-49ea-4db1-a70e-24dc19f37b3f",
+      "type": "cube",
+      "position": [
+        0,
+        5,
+        -45
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.4,
+        10,
+        90
+      ],
+      "visible": true,
+      "physics": false,
+      "isStatic": true,
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "hasTrigger": false,
+      "hasCollision": false,
+      "structural": true,
+      "color": [
+        0.55,
+        0.62,
+        0.72
+      ],
+      "structureMaterial": {
+        "materialType": "ice",
+        "tiling": 4,
+        "roughness": 0.4
+      }
+    },
+    {
+      "id": "8b7fcf6f-5d62-4407-be3d-469a30b7c5f9",
+      "type": "cube",
+      "position": [
+        45,
+        5,
+        0
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        0.4,
+        10,
+        90
+      ],
+      "visible": true,
+      "physics": false,
+      "isStatic": true,
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "hasTrigger": false,
+      "hasCollision": false,
+      "structural": true,
+      "color": [
+        0.55,
+        0.62,
+        0.72
+      ],
+      "structureMaterial": {
+        "materialType": "ice",
+        "tiling": 4,
+        "roughness": 0.4
+      }
+    },
+    {
+      "id": "14236b23-6345-4809-a9a8-4fe5b58031dd",
+      "type": "cube",
+      "position": [
+        -45,
+        5,
+        0
+      ],
+      "rotation": [
+        0,
+        90,
+        0
+      ],
+      "scale": [
+        0.4,
+        10,
+        90
+      ],
+      "visible": true,
+      "physics": false,
+      "isStatic": true,
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "hasTrigger": false,
+      "hasCollision": false,
+      "structural": true,
+      "color": [
+        0.55,
+        0.62,
+        0.72
+      ],
+      "structureMaterial": {
+        "materialType": "ice",
+        "tiling": 4,
+        "roughness": 0.4
+      }
+    },
+    {
+      "id": "a8dd9821-8e15-4e2f-9b0b-5f1924d7686f",
+      "type": "cube",
+      "position": [
+        0,
+        0.5,
+        -30
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        12,
+        1,
+        8
+      ],
+      "visible": true,
+      "physics": false,
+      "isStatic": true,
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "hasTrigger": false,
+      "hasCollision": false,
+      "structural": true,
+      "color": [
+        0.45,
+        0.5,
+        0.58
+      ],
+      "structureMaterial": {
+        "materialType": "stone",
+        "tiling": 4,
+        "roughness": 0.7
+      }
+    },
+    {
+      "id": "c73a8cf9-9a93-4184-85ed-74f93f569f13",
+      "type": "cube",
+      "position": [
+        0,
+        2,
+        -20
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        5,
+        1,
+        5
+      ],
+      "visible": true,
+      "physics": false,
+      "isStatic": true,
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "hasTrigger": false,
+      "hasCollision": false,
+      "structural": true,
+      "color": [
+        0.45,
+        0.5,
+        0.58
+      ],
+      "structureMaterial": {
+        "materialType": "stone",
+        "tiling": 3,
+        "roughness": 0.65
+      }
+    },
+    {
+      "id": "9c44525a-a82e-4dec-bac7-f0dd3cdd9e98",
+      "type": "cube",
+      "position": [
+        -6,
+        3.5,
+        -14
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        4,
+        1,
+        4
+      ],
+      "visible": true,
+      "physics": false,
+      "isStatic": true,
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "hasTrigger": false,
+      "hasCollision": false,
+      "structural": true,
+      "color": [
+        0.45,
+        0.5,
+        0.58
+      ],
+      "structureMaterial": {
+        "materialType": "stone",
+        "tiling": 3,
+        "roughness": 0.65
+      }
+    },
+    {
+      "id": "8a591ec7-291c-4615-93e1-6ee85a15ea60",
+      "type": "cube",
+      "position": [
+        2,
+        5,
+        -8
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        4,
+        1,
+        4
+      ],
+      "visible": true,
+      "physics": false,
+      "isStatic": true,
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "hasTrigger": false,
+      "hasCollision": false,
+      "structural": true,
+      "color": [
+        0.45,
+        0.5,
+        0.58
+      ],
+      "structureMaterial": {
+        "materialType": "stone",
+        "tiling": 3,
+        "roughness": 0.65
+      }
+    },
+    {
+      "id": "bcbd39ff-4d4c-4520-bbdc-2e61c182d676",
+      "type": "cube",
+      "position": [
+        -4,
+        6.5,
+        -2
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        3.5,
+        1,
+        3.5
+      ],
+      "visible": true,
+      "physics": false,
+      "isStatic": true,
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "hasTrigger": false,
+      "hasCollision": false,
+      "structural": true,
+      "color": [
+        0.45,
+        0.5,
+        0.58
+      ],
+      "structureMaterial": {
+        "materialType": "stone",
+        "tiling": 3,
+        "roughness": 0.65
+      }
+    },
+    {
+      "id": "0216a9d6-f452-42c7-b957-acde4dd7cd5b",
+      "type": "cube",
+      "position": [
+        5,
+        8,
+        3
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        3.5,
+        1,
+        3.5
+      ],
+      "visible": true,
+      "physics": false,
+      "isStatic": true,
+      "velocity": [
+        0,
+        0,
+        0
+      ],
+      "hasTrigger": false,
+      "hasCollision": false,
+      "structural": true,
+      "color": [
+        0.45,
+        0.5,
+        0.58
+      ],
+      "structureMaterial": {
+        "materialType": "stone",
+        "tiling": 3,
+        "roughness": 0.65
+      }
+    }
+  ],
+  "script": "-- Frostpeak Ascent - snowy mountain platformer\n\nlocal platforms = {}\nlocal checkpoints = {}\nlocal hazards = {}\nlocal yetis = {}\nlocal lastCheckpoint = {x=0, y=2, z=-30}\nlocal gameWon = false\n\nGame.OnStart(function()\n  -- Pale grey-blue starry night sky\n  Scene.SetCustomSkybox({\n    topColor = {0.08, 0.12, 0.22},\n    bottomColor = {0.18, 0.24, 0.36},\n    horizonColor = {0.45, 0.55, 0.70},\n    groundColor = {0.85, 0.92, 0.98},\n    sunColor = {0.75, 0.82, 0.95},\n    sunDirection = {25, 200, 0},\n    sunSize = 0.03,\n    sunIntensity = 0.6,\n    exposure = 1.0,\n    atmosphereThickness = 1.4,\n    fogColor = {0.55, 0.65, 0.78},\n    fogDensity = 0.012,\n    ambientColor = {0.55, 0.65, 0.80},\n    ambientIntensity = 0.7,\n    starDensity = 0.9,\n    cloudDensity = 0.3,\n    timeOfDay = \"night\",\n  })\n  Scene.SetGravity(-12)\n\n  -- Slope-blended snow/ice/rock terrain\n  Structure.CreateTerrain(0, 0, 0, 200, 200, {\n    { materialType = \"snow\", slopeMin = 0.0,  slopeMax = 0.30, tiling = 10.0 },\n    { materialType = \"ice\",  slopeMin = 0.20, slopeMax = 0.55, tiling = 8.0 },\n    { materialType = \"rock\", slopeMin = 0.50, slopeMax = 1.0,  tiling = 6.0 },\n  })\n\n  -- Perimeter walls (icy stone)\n  local wallColor = {0.55, 0.62, 0.72}\n  local w1 = Structure.CreateWall(  0, 5,  45, 90, 10,  0, wallColor)\n  local w2 = Structure.CreateWall(  0, 5, -45, 90, 10,  0, wallColor)\n  local w3 = Structure.CreateWall( 45, 5,   0, 90, 10, 90, wallColor)\n  local w4 = Structure.CreateWall(-45, 5,   0, 90, 10, 90, wallColor)\n  w1:SetMaterial(\"ice\", 4.0, 0.4)\n  w2:SetMaterial(\"ice\", 4.0, 0.4)\n  w3:SetMaterial(\"ice\", 4.0, 0.4)\n  w4:SetMaterial(\"ice\", 4.0, 0.4)\n\n  -- Player setup\n  Player.SetSpeed(6)\n  Player.SetJumpHeight(4)\n  Player.SetSpawnPoint(0, 2, -30)\n  Player.SetHealth(100)\n\n  -- Audio + music\n  Audio.PlayMusic(\"adventure\")\n  Audio.PlaySound(\"ambient_cave\")\n\n  -- Base camp pad (start area)\n  local stoneColor = {0.45, 0.50, 0.58}\n  local basePad = Structure.CreateBox(0, 0.5, -30, 12, 1, 8, stoneColor)\n  basePad:SetMaterial(\"stone\", 4.0, 0.7)\n  basePad:SetStatic(true)\n\n  -- Decorative pine trees around the base\n  local pinePositions = {\n    {-20, 0, -35}, {18, 0, -38}, {-30, 0, -20}, {28, 0, -15},\n    {-35, 0, 5}, {32, 0, 8}, {-25, 0, 30}, {25, 0, 32}\n  }\n  for _, p in ipairs(pinePositions) do\n    local pine = Object.Create(\"model:pine_tree\")\n    pine:SetPosition(p[1], p[2], p[3])\n    pine:SetScale(2.5, 3, 2.5)\n    pine:SetStatic(true)\n  end\n\n  -- Climbing platforms - stone blocks going up the mountain\n  -- Format: {x, y, z, sx, sy, sz}\n  local platformData = {\n    {0,    2,   -20, 5, 1, 5},     -- 1 starter\n    {-6,   3.5, -14, 4, 1, 4},     -- 2\n    {2,    5,   -8,  4, 1, 4},     -- 3\n    {-4,   6.5, -2,  3.5, 1, 3.5}, -- 4\n    {5,    8,    3,  3.5, 1, 3.5}, -- 5 checkpoint\n    {-3,   9.5,  9,  3, 1, 3},     -- 6\n    {6,   11,   14,  3, 1, 3},     -- 7\n    {-2,  12.5, 19,  3, 1, 3},     -- 8\n    {8,   14,   23,  3, 1, 3},     -- 9 checkpoint\n    {0,   15.5, 28,  3, 1, 3},     -- 10\n    {-7,  17,   32,  3, 1, 3},     -- 11\n    {3,   18.5, 36,  3.5, 1, 3.5}, -- 12\n    {0,   20,   41,  6, 1, 6},     -- 13 summit pad\n  }\n  for i, p in ipairs(platformData) do\n    local plat = Structure.CreateBox(p[1], p[2], p[3], p[4], p[5], p[6], stoneColor)\n    plat:SetMaterial(\"stone\", 3.0, 0.65)\n    plat:SetStatic(true)\n    platforms[i] = plat\n  end\n\n  -- Ice hazards on platforms (touching damages player)\n  local hazardData = {\n    {-5, 7,   -2}, -- on platform 4\n    {4,  10,   9}, -- between platforms\n    {-1, 13,  19}, -- on platform 8\n    {7,  16,  28}, -- between 9 and 10\n    {-6, 18,  32}, -- on platform 11\n  }\n  for i, hp in ipairs(hazardData) do\n    local spike = Object.Create(\"model:ice_spike\")\n    spike:SetPosition(hp[1], hp[2], hp[3])\n    spike:SetScale(1.2, 1.5, 1.2)\n    spike:OnPlayerEnter(function()\n      Player.AddHealth(-25)\n      Audio.PlaySound(\"hit\")\n      Effects.ScreenShake(0.3, 0.2)\n      Effects.Flash({r=0.5, g=0.7, b=1.0}, 0.2)\n      Player.ShowMessage(\"Ouch! Icy spikes!\", 1.5)\n    end)\n    hazards[i] = spike\n  end\n\n  -- Checkpoints (flags on key platforms)\n  local checkpointData = {\n    {x=5, y=9,  z=3,  name=\"Halfway up!\"},\n    {x=8, y=15, z=23, name=\"Almost there!\"},\n  }\n  for i, cp in ipairs(checkpointData) do\n    local flag = Object.Create(\"model:checkpoint_flag\")\n    flag:SetPosition(cp.x, cp.y, cp.z)\n    flag:SetScale(1.5, 2, 1.5)\n    flag:SetEmissive(1.0, 0.3, 0.3, 0.8)\n    local reached = false\n    flag:OnPlayerEnter(function()\n      if reached then return end\n      reached = true\n      lastCheckpoint = {x=cp.x, y=cp.y + 1.5, z=cp.z}\n      Audio.PlaySound(\"collect\")\n      Effects.Spawn(\"sparkle\", cp.x, cp.y + 1, cp.z)\n      Player.ShowMessage(cp.name .. \" Checkpoint saved!\", 2)\n      Player.AddScore(100)\n    end)\n    checkpoints[i] = flag\n  end\n\n  -- Wandering yetis on a couple wider platforms (light obstacles)\n  local yetiSpawns = {\n    {x=5, y=9,  z=3,  range=2, dir=1},\n    {x=0, y=21, z=41, range=3, dir=1},\n  }\n  for i, ys in ipairs(yetiSpawns) do\n    local y = Object.Create(\"model:yeti\")\n    y:SetPosition(ys.x, ys.y, ys.z)\n    y:SetScale(1, 1, 1)\n    y.data = {baseX=ys.x, baseZ=ys.z, range=ys.range, dir=ys.dir, t=0, y=ys.y}\n    y:OnPlayerEnter(function()\n      Player.AddHealth(-15)\n      Audio.PlaySound(\"hit\")\n      Effects.ScreenShake(0.4, 0.3)\n      Player.ShowMessage(\"Yeti slap!\", 1)\n    end)\n    yetis[i] = y\n  end\n\n  -- Summit shrine (goal)\n  local shrine = Object.Create(\"model:shrine\")\n  -- Summit shrine sits atop the highest platform at (0, 20, 41); the goal frames the climb's reward\n  shrine:SetPosition(0, 21, 41)\n  shrine:SetScale(2.5, 3, 2.5)\n  shrine:SetEmissive(0.3, 0.6, 1.0, 2.5)\n  shrine:OnPlayerEnter(function()\n    if gameWon then return end\n    gameWon = true\n    Player.AddScore(1000)\n    Effects.Spawn(\"confetti\", 0, 22, 41)\n    Effects.Spawn(\"sparkle\", 0, 22, 41)\n    Audio.PlaySound(\"win\")\n    Player.ShowTitle(\"Summit Reached!\", \"You conquered Frostpeak!\", 4)\n    Timer.After(2, function() Game.End(\"win\") end)\n  end)\n\n  -- Glowing summit light\n  local summitLight = Light.Create(\"point\", 0, 24, 41)\n  summitLight:SetColor(0.4, 0.7, 1.0)\n  summitLight:SetIntensity(3)\n  summitLight:SetRange(20)\n\n  -- Base camp light\n  local baseLight = Light.Create(\"point\", 0, 4, -30)\n  baseLight:SetColor(1.0, 0.8, 0.5)\n  baseLight:SetIntensity(2)\n  baseLight:SetRange(15)\n\n  -- HUD\n  UI.ShowHUD({health=true, score=true, objective=\"Climb to the glowing summit shrine!\"})\n  Player.ShowTitle(\"Frostpeak Ascent\", \"Climb to the summit shrine!\", 3)\nend)\n\n-- Main update loop\nGame.OnUpdate(function(dt)\n  if gameWon then return end\n\n  -- Animate yetis (slight patrol)\n  for _, y in ipairs(yetis) do\n    y.data.t = y.data.t + dt\n    local offset = math.sin(y.data.t * 1.2) * y.data.range\n    local newX = y.data.baseX + offset\n    y:SetPosition(newX, y.data.y, y.data.baseZ)\n    -- Face direction of motion\n    local lookX = y.data.baseX + math.cos(y.data.t * 1.2) * y.data.range\n    y:LookAt(lookX, y.data.y, y.data.baseZ + 0.1)\n  end\n\n  -- Player fell off the mountain - respawn at last checkpoint\n  local pos = Player.GetPosition()\n  if pos.y < -3 then\n    Player.Teleport(lastCheckpoint.x, lastCheckpoint.y, lastCheckpoint.z)\n    Player.AddHealth(-10)\n    Audio.PlaySound(\"lose\")\n    Effects.Flash({r=1.0, g=0.3, b=0.3}, 0.3)\n    Player.ShowMessage(\"You fell! Returned to checkpoint.\", 2)\n  end\nend)\n\nGame.OnPlayerDied(function()\n  Audio.PlaySound(\"lose\")\n  Effects.ScreenShake(0.6, 0.4)\n  Effects.Flash({r=1.0, g=0.2, b=0.2}, 0.5)\n  Player.SetHealth(100)\n  Player.Teleport(lastCheckpoint.x, lastCheckpoint.y, lastCheckpoint.z)\n  Player.ShowMessage(\"You froze! Try again.\", 2)\nend)\n"
+}

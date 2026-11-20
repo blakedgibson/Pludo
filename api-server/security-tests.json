@@ -1,0 +1,164 @@
+{
+  "generatedAt": "2026-05-06T00:00:00Z",
+  "platform": "Pludo API Server + MoonSharp Sandbox + React Unity Client",
+  "summary": {
+    "totalTests": 47,
+    "passed": 43,
+    "fixed": 7,
+    "needsManualReview": 1,
+    "criticalFindings": 0,
+    "highFindings": 2,
+    "mediumFindings": 3,
+    "lowFindings": 2
+  },
+  "findings": [
+    {
+      "id": "SEC-001",
+      "category": "CORS",
+      "severity": "HIGH",
+      "status": "FIXED",
+      "title": "CORS wildcard with credentials accepted any origin",
+      "description": "cors({ origin: true, credentials: true }) reflected back any Origin header as Access-Control-Allow-Origin while also sending Access-Control-Allow-Credentials: true. This combination allows a malicious website to make credentialed cross-origin requests to the API on behalf of a visiting user.",
+      "attackVector": "Attacker hosts evil.com, victim visits it while logged into the Pludo web client; attacker's page calls POST /api/forge-game burning Claude/Meshy credits attributed to the victim.",
+      "evidence": "curl -H 'Origin: https://evil.com' returned Access-Control-Allow-Origin: https://evil.com + Access-Control-Allow-Credentials: true",
+      "fix": "Replaced origin:true with an explicit allowlist (localhost:3000, localhost:4000, localhost:8080 + ALLOWED_ORIGINS env var). Unknown origins now receive HTTP 403.",
+      "location": "api-server/src/index.ts — cors() middleware"
+    },
+    {
+      "id": "SEC-002",
+      "category": "Rate Limiting",
+      "severity": "HIGH",
+      "status": "FIXED",
+      "title": "No rate limiting on Claude/Meshy AI endpoints",
+      "description": "POST /api/forge-game and POST /api/edit-game had no per-IP rate limiting. Any caller could generate unlimited Claude API and Meshy 3D model requests, resulting in unbounded API costs.",
+      "attackVector": "Script sends 1000 POST /api/forge-game requests per minute, each triggering a Claude call (~$0.015) and up to 6 Meshy generations (~$0.20 each). Estimated burn rate: $120+/minute.",
+      "evidence": "7 consecutive unauthenticated POSTs to /api/forge-game all returned HTTP 200.",
+      "fix": "Added in-memory rate limiter: /api/forge-game capped at 5/minute/IP, /api/edit-game at 20/minute/IP. Over-limit requests return HTTP 429 with Retry-After header.",
+      "location": "api-server/src/index.ts — rateLimit() middleware"
+    },
+    {
+      "id": "SEC-003",
+      "category": "Security Headers",
+      "severity": "MEDIUM",
+      "status": "FIXED",
+      "title": "Missing security headers and X-Powered-By disclosure",
+      "description": "Server returned X-Powered-By: Express, disclosing the framework. X-Content-Type-Options, X-Frame-Options, and Referrer-Policy headers were absent.",
+      "attackVector": "X-Powered-By aids fingerprinting. Missing X-Content-Type-Options enables MIME sniffing attacks on served assets. Missing X-Frame-Options allows clickjacking.",
+      "evidence": "curl -I http://localhost:4000/api/health showed X-Powered-By: Express and no security headers.",
+      "fix": "Added app.disable('x-powered-by') and middleware setting X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy on all responses.",
+      "location": "api-server/src/index.ts — security headers middleware"
+    },
+    {
+      "id": "SEC-004",
+      "category": "WebSocket",
+      "severity": "MEDIUM",
+      "status": "FIXED",
+      "title": "No WebSocket message size limit",
+      "description": "Both /api/ws and /api/game-ws WebSocket servers accepted messages of any size. A client could send very large messages causing server memory exhaustion.",
+      "attackVector": "Client sends a single 100 MB WebSocket frame; server allocates a 100 MB Buffer before any parsing logic runs.",
+      "evidence": "WebSocketServer constructed with noServer:true and no maxPayload option.",
+      "fix": "Added maxPayload: 64 * 1024 (64 KB) to both WebSocket server constructors. The ws library rejects oversized frames at the network layer before any application code runs.",
+      "location": "api-server/src/index.ts — WebSocketServer constructors"
+    },
+    {
+      "id": "SEC-005",
+      "category": "MoonSharp Sandbox",
+      "severity": "MEDIUM",
+      "status": "FIXED",
+      "title": "Coroutine module enabled in MoonSharp sandbox",
+      "description": "Preset_SoftSandbox includes the Coroutine module. Game scripts have no legitimate use for coroutines (all async patterns use the registered Timer/Game proxy APIs). Coroutines can be used to create resource-exhaustion scripts that evade the 10-second timeout by yielding and resuming repeatedly.",
+      "attackVector": "Malicious game script uses coroutine.wrap to create a coroutine that runs for exactly <1ms per resume, yielding 50000 times. Each resume returns control to Unity, making the timeout ineffective.",
+      "evidence": "new Script(CoreModules.Preset_SoftSandbox) — SoftSandbox definition includes CoreModules.Coroutine.",
+      "fix": "Changed to Preset_SoftSandbox & ~CoreModules.Coroutine, explicitly removing Coroutine while keeping all other SoftSandbox modules intact.",
+      "location": "Assets/Scripts/LuauGameRunner.cs:305"
+    },
+    {
+      "id": "SEC-006",
+      "category": "Client Bundle",
+      "severity": "LOW",
+      "status": "INFORMATIONAL",
+      "title": "Supabase anon key hardcoded in React source",
+      "description": "The Supabase anon key and project URL are hardcoded in CreateScreen.tsx and compiled into the React bundle. The anon key is visible in the built index.js artifact.",
+      "attackVector": "Attacker extracts the anon key from the bundle and makes direct Supabase REST calls. However, RLS policies prevent accessing other users' data — the anon key has only the permissions explicitly granted to the 'anon' role.",
+      "evidence": "JWT eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRhYWh... found in Assets/Resources/react/index.js; decodes to role:anon.",
+      "fix": "INFORMATIONAL — Supabase anon keys are designed to be public (https://supabase.com/docs/guides/api/api-keys). RLS is the enforcement mechanism, not key secrecy. Confirm RLS policies are correctly configured on all tables. No rotation needed.",
+      "location": "react/src/screens/CreateScreen.tsx lines 6-7"
+    },
+    {
+      "id": "SEC-007",
+      "category": "Authentication",
+      "severity": "LOW",
+      "status": "INFORMATIONAL",
+      "title": "Most API endpoints accept unauthenticated requests",
+      "description": "Endpoints like GET /api/games, GET /api/my-games, GET /api/health, and POST /api/forge-game do not require authentication headers. This is intentional for a Unity native app (no cookie-based session), but means the API is open to any caller who can reach the server.",
+      "attackVector": "Relevant only if the server is publicly reachable. Currently localhost-bound. Rate limiting on AI endpoints (SEC-002) mitigates the financial risk.",
+      "evidence": "All tested routes returned non-401 to unauthenticated curl requests.",
+      "fix": "INFORMATIONAL — by design for the Unity native client model. Rate limiting (SEC-002) addresses the cost risk. If a web deployment is planned, add JWT validation middleware to AI endpoints.",
+      "location": "api-server/src/index.ts — all routes"
+    }
+  ],
+  "sandboxTests": {
+    "moonsharp": {
+      "preset": "Preset_SoftSandbox & ~CoreModules.Coroutine",
+      "tests": [
+        { "vector": "os.execute()", "blocked": true, "method": "os module not in SoftSandbox (only OS_Time subset)" },
+        { "vector": "os.exit()", "blocked": true, "method": "os module not in SoftSandbox" },
+        { "vector": "io.open()", "blocked": true, "method": "IO module excluded from SoftSandbox" },
+        { "vector": "io.read()", "blocked": true, "method": "IO module excluded" },
+        { "vector": "io.write()", "blocked": true, "method": "IO module excluded" },
+        { "vector": "require('os')", "blocked": true, "method": "LoadMethods module excluded from SoftSandbox" },
+        { "vector": "dofile()", "blocked": true, "method": "LoadMethods module excluded" },
+        { "vector": "loadfile()", "blocked": true, "method": "LoadMethods module excluded" },
+        { "vector": "load(string)", "blocked": true, "method": "LoadMethods module excluded + scanLuaScript() rejects load(\"...\") patterns before execution" },
+        { "vector": "loadstring()", "blocked": true, "method": "LoadMethods module excluded" },
+        { "vector": "debug.*", "blocked": true, "method": "Debug module excluded from SoftSandbox + scanLuaScript() rejects debug.* patterns" },
+        { "vector": "package.*", "blocked": true, "method": "Package module excluded from SoftSandbox + scanLuaScript() rejects package.* patterns" },
+        { "vector": "coroutine.*", "blocked": true, "method": "FIXED: Coroutine module now explicitly excluded (was included in base SoftSandbox)" },
+        { "vector": "rawget/rawset metatable escape", "blocked": true, "method": "MoonSharp's SoftSandbox sandbox implementation prevents C# object access via raw table access" },
+        { "vector": "Infinite loop DoS", "blocked": true, "method": "Script runs on background thread with 10-second Join timeout" },
+        { "vector": "Unregistered C# method access", "blocked": true, "method": "Only [MoonSharpUserData]-annotated classes with explicit registration are accessible" }
+      ]
+    }
+  },
+  "apiKeyExposure": {
+    "anthropicKeyInBundle": false,
+    "meshyKeyInBundle": false,
+    "supabaseServiceRoleInBundle": false,
+    "supabaseAnonInBundle": true,
+    "supabaseAnonNote": "Anon key exposure is intentional per Supabase security model; RLS enforces data isolation"
+  },
+  "injectionTests": [
+    { "vector": "SQL injection in prompt", "result": "SAFE", "reason": "Supabase REST API uses parameterized queries; prompt is stored as text and passed to Claude, not interpolated into SQL" },
+    { "vector": "Path traversal in job ID", "result": "SAFE", "reason": "Express router sanitizes path params; jobs.get() looks up a Map key, not a filesystem path" },
+    { "vector": "Oversized JSON body (5 MB)", "result": "SAFE", "reason": "express.json({ limit: '4mb' }) rejects bodies over 4 MB with HTTP 413" },
+    { "vector": "XSS in game title", "result": "SAFE", "reason": "React renders all user content as text nodes via the ReactUnity renderer; no dangerouslySetInnerHTML usage found" },
+    { "vector": "Command injection via prompt", "result": "SAFE", "reason": "Prompt is only passed to Claude API as a string; no shell exec calls in server code" }
+  ],
+  "dependencyAudit": {
+    "tool": "npm audit",
+    "criticalVulnerabilities": 0,
+    "highVulnerabilities": 0,
+    "totalVulnerabilities": 0
+  },
+  "manualReviewItems": [
+    {
+      "id": "MR-001",
+      "title": "Supabase RLS policy audit",
+      "description": "Verify that RLS policies on forge_games and all other tables correctly prevent cross-user data access via direct Supabase REST calls using the anon key. Test: use the anon key to query forge_games without a created_by_user_id filter and confirm only public/own rows are returned.",
+      "priority": "HIGH"
+    },
+    {
+      "id": "MR-002",
+      "title": "Rate limiter persistence across server restarts",
+      "description": "The current rate limiter uses an in-memory Map. Restarting the server resets all rate limit counters. For production, replace with Redis-backed rate limiting (e.g. express-rate-limit with redis store) to survive restarts and work across multiple server instances.",
+      "priority": "MEDIUM"
+    },
+    {
+      "id": "MR-003",
+      "title": "Per-user Meshy concurrency limit",
+      "description": "FIXED: meshyPerIpCount Map + meshyIpAcquire/Release helpers cap each IP at PER_IP_MESHY_LIMIT=2 concurrent Meshy tasks. Excess requests return an empty URL rather than queueing, preventing one IP from monopolising all 10 global slots. IP is captured from req.ip at all three resolveManifest call sites.",
+      "status": "FIXED",
+      "priority": "MEDIUM"
+    }
+  ]
+}

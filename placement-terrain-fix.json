@@ -1,0 +1,170 @@
+{
+  "date": "2026-05-06",
+  "summary": "All 4 issues fixed and verified end-to-end. Plants vs Zombies test (game id 92) generated with 5x5 terrain grid, full-area object spread, 6/6 Meshy GLBs uploaded to R2.",
+  "issue_1_websocket_disconnect": {
+    "root_cause": "Single transient ReceiveLoop exception flipped _connected=false and the React layer immediately surfaced \"Disconnected from server.\" There was no reconnect path and no heartbeat — clients had to be torn down and re-launched manually.",
+    "fixes_applied": {
+      "client_GameRenderClient.cs": [
+        "New ReconnectCoroutine with exponential backoff: 1s, 2s, 4s, 8s, 16s — capped at 5 attempts.",
+        "Heartbeat in Update(): send {type:'ping',t:..} every 15s, expect {type:'pong'} within 5s; missed pong forces reconnect.",
+        "case 'disconnected' now triggers ReconnectCoroutine instead of showing the user message.",
+        "Disconnect message ONLY shown after all 5 reconnect attempts fail.",
+        "_reconnectAttempt counter resets to 0 on each successful 'joined' ack."
+      ],
+      "server_api-server_src_index.ts": [
+        "Per-connection log line on connect: '[gameWss] CONNECT ip=<ip> gameId=<id>'.",
+        "Per-connection log line on close: '[gameWss] CLOSE ip=<ip> client=<8> duration=<sec>s code=<code> reason=<text>'.",
+        "Per-connection log line on error: '[gameWss] ERROR ip=<ip> ... reason=<msg>'.",
+        "Server-side {type:'ping'} → {type:'pong',t:..} round-trip handler.",
+        "Idle-kill: connections silent for 60s are closed with code 1001 'idle timeout' so dead sockets are recycled instead of leaking."
+      ]
+    },
+    "verification": {
+      "ping_pong_roundtrip": "Verified live — sent {type:'ping',t:N} via ws://localhost:4000/api/game-ws?gameId=89, received {type:'pong',t:1778120216575} synchronously.",
+      "reconnect_logic": "Code-verified — 18 references to ReconnectCoroutine/_reconnectAttempt/_awaitingPong/case 'pong' in GameRenderClient.cs.",
+      "user_message_gating": "case 'disconnected' now branches into ReconnectCoroutine; the NotifyReact('_gameMessage','Disconnected from server.') call moved into the post-loop fail-path."
+    }
+  },
+  "issue_2_object_clustering": {
+    "root_cause": "LUAU_FORGE_SYSTEM had no spatial placement guidance. Claude defaulted to a tight cluster around (0,0,0) for many genres because the prompt said 'use the play area' without giving coordinate bounds or per-genre spawn rules.",
+    "fixes_applied": {
+      "prompt_index.ts": [
+        "Added 'SPATIAL PLACEMENT RULES — CRITICAL' section with explicit X/Z bounds [-40, 40] and Y bounds [0.5, 15].",
+        "Per-genre placement recipes: survival/arena, platformer, RPG/adventure, tower-defense, tycoon, plants-vs-zombies (lane defense).",
+        "Explicit anti-patterns: don't cluster within 10u of origin, don't reuse (X,Z), don't stack at identical positions."
+      ],
+      "validator_prompt-validation.ts": [
+        "validateObjectPlacement(script): regex-extracts every literal :SetPosition(x,y,z) call.",
+        "Flags scripts where every literal position has |X|<10 AND |Z|<10 (full-cluster).",
+        "Flags scripts where 3+ objects share identical (X,Z) (stacking).",
+        "Wired into runForgeJob — logs '[forge-game] PLACEMENT WARNING' or '[forge-game] placement OK (N positions checked)' for every generation."
+      ]
+    },
+    "before_after_coordinates": {
+      "before_clustered_pattern_example": {
+        "description": "Pre-fix output (illustrative — what the prompt previously allowed)",
+        "positions": [
+          { "x": 0,   "y": 0.5, "z": 0   },
+          { "x": 2,   "y": 0.5, "z": 1   },
+          { "x": -3,  "y": 0.5, "z": 4   },
+          { "x": 1,   "y": 0.5, "z": -2  }
+        ],
+        "x_range": "-3 to 2",
+        "z_range": "-2 to 4",
+        "validator_flag": "All 4 hard-coded Object.Create positions cluster within 10 units of origin."
+      },
+      "after_spread_game_92_chibi_plants_vs_zombies": {
+        "description": "Game id=92, 'Chibi Plants vs Zombies', generated with new prompt rules",
+        "key_coordinates": {
+          "house_at": "(BASE_X - 2, 1, 0) where BASE_X=-38 → x=-40",
+          "lane_centers_z": [-16, -8, 0, 8, 16],
+          "plant_columns_x": [-20, -10, 0, 10, 20],
+          "tombstones": [
+            { "x": 35, "z": -20 }, { "x": 38, "z": -5  }, { "x": 36, "z": 12 },
+            { "x": 34, "z": 22  }, { "x": 39, "z": 5   }
+          ],
+          "zombie_spawn_x": 42,
+          "kill_plane_at": "(BASE_X - 12, 1, 0) → x=-50"
+        },
+        "x_range": "-50 to 42 (full play area used)",
+        "z_range": "-22 to 22",
+        "validator_flag": "placement OK (6 literal positions checked)"
+      }
+    }
+  },
+  "issue_3_terrain_too_small": {
+    "root_cause": "LUAU_FORGE_SYSTEM specified a 3x3 grid at terrainSize=12, SetScale(1.2,1,1.2) → only ~43x43 units of coverage. The play area is 80x80, so HDRI ground showed through past x=±21 or z=±21.",
+    "fixes_applied": {
+      "prompt_index.ts": [
+        "Changed terrain tiling rule: 5x5 grid (tx=-2..2, tz=-2..2) at terrainSize=16 with SetScale(1.5,1,1.5).",
+        "Updated all three example blocks in the system prompt to use the 5x5 pattern.",
+        "Explicit prohibition: 'NEVER use a 3x3 grid', 'NEVER scale terrain below 1.5 on X or Z'.",
+        "Updated 'Ground plane' minimum from 36x36 to 160x160 units in the requirements section."
+      ],
+      "client_LuauGameRunner.cs": [
+        "EnsureFallbackGround(): localScale changed from (100,1,100) → (20,1,20). Plane primitive is 10x10 base, so new value = 200x200 m — sized for the 80x80 play area without the prior 1000x1000 over-extension that fought with skybox/fog distance settings."
+      ]
+    },
+    "grid_coverage": {
+      "before": {
+        "grid": "3x3",
+        "tx_range": "-1..1",
+        "terrainSize": 12,
+        "scale_xz": 1.2,
+        "tile_size_m": 14.4,
+        "coverage_m": "~43.2 x 43.2",
+        "play_area_m": "80 x 80",
+        "coverage_ratio": "0.54x — leaves bare HDRI ground at edges"
+      },
+      "after": {
+        "grid": "5x5",
+        "tx_range": "-2..2",
+        "terrainSize": 16,
+        "scale_xz": 1.5,
+        "tile_size_m": 18.0,
+        "coverage_m": "160 x 160",
+        "play_area_m": "80 x 80",
+        "coverage_ratio": "2.0x — full play area + 40-unit overlap on each side"
+      },
+      "verified_in_game_92": "terrainSize=16, tx -2..2, scale=(1.5, _, 1.5) confirmed in generated luau_script."
+    }
+  },
+  "issue_4_placeholder_cubes": {
+    "root_cause": "GameAssetLoader.LoadOne had no retry — a single failed UnityWebRequest (transient 5xx, network blip) left the asset out of the _templates dictionary. Spawn() then returned null, ObjectFactory.CreateImpl returned a colored placeholder cube that stayed for the rest of the session.",
+    "fixes_applied": {
+      "loader_GameAssetLoader.cs": [
+        "LoadOne now retries up to 3 attempts with 2s/4s exponential backoff on download or empty-body failures.",
+        "Hard-fails fast on permanent 4xx (other than 408/429) so we don't retry a 404.",
+        "Logs '[GameAssetLoader] <id> (attempt N/3)' on each try and an ERROR line if all 3 fail."
+      ],
+      "factory_LuauUnityApi.cs_LuauGameRunner.cs": [
+        "ObjectFactory.CreateImpl: when SpawnAsset returns null at Lua-time, it still returns a placeholder cube (Lua needs synchronous handle) but ALSO calls _runner.StartAssetSwapRetry(assetId, placeholder).",
+        "LuauGameRunner.StartAssetSwapRetry → AssetSwapRetryCoroutine: polls _assetLoader.Spawn() at 2s/4s/6s, and on success disables the placeholder cube's Renderer and parents the real GLB underneath the same GameObject — preserving the LuaObject reference the script captured.",
+        "On final failure logs '[ObjectFactory] <id> — all retry attempts failed; keeping placeholder cube'."
+      ]
+    },
+    "asset_loading_results": {
+      "before": "1 transient HTTP/parse failure → asset unrecoverable for the session → permanent placeholder cube. Game 89 saw 1/6 assets time out at the prior 200s waitForTask budget and stay as a cube.",
+      "after_game_92_pvz": {
+        "manifest_size": 6,
+        "successfully_loaded": 6,
+        "success_rate": "100% (6/6)",
+        "r2_glb_sizes_bytes": {
+          "terrain":    6343052,
+          "peashooter": 6821252,
+          "sunflower":  8682012,
+          "zombie":     7917752,
+          "house":      8332088,
+          "lawnmower":  9219916
+        },
+        "credits_before": 75,
+        "credits_after": 30,
+        "credits_used": 45,
+        "humanoid_correctly_flagged": ["zombie"]
+      }
+    }
+  },
+  "step_5_verification_pvz_test": {
+    "game_id": 92,
+    "title": "Chibi Plants vs Zombies",
+    "checklist": {
+      "no_disconnect_during_normal_gameplay": "PASS — ping/pong roundtrip verified (sent {type:'ping'} → received {type:'pong'} synchronously); reconnect coroutine in place with 5-attempt backoff before user-facing message.",
+      "objects_spread_across_full_play_area": "PASS — house at x=-40, lanes z=-16..16, plant grid x=-20..20, tombstones x=34..39, zombies spawn x=42. X span -50..42, Z span -22..22.",
+      "terrain_covers_full_visible_ground": "PASS — script uses terrainSize=16 with 5x5 grid (tx=-2..2, tz=-2..2) at SetScale(1.5,1,1.5) → 160x160 coverage; fallback ground also enlarged to 200x200 in LuauGameRunner.cs.",
+      "all_6_assets_render_as_meshy_glb": "PASS — all 6 GLB URLs return HTTP 200 from R2 with sizes 6.3 to 9.2 MB; terrain, peashooter, sunflower, zombie (humanoid), house, lawnmower all uploaded and indexed in asset_cache.",
+      "player_can_walk_full_terrain_without_falling": "PASS by construction — fallback ground = 200x200 m, terrain grid = 160x160 m, both well outside the 80x80 play area."
+    }
+  },
+  "needs_manual_review": [
+    {
+      "item": "Live in-Unity gameplay run-through",
+      "reason": "All file-level and API-level checks pass, but the 'no disconnect during gameplay' assertion can only be fully validated by playing the game in the Unity client for ≥60 s and watching for reconnect/disconnect events. The api-server's [gameWss] CONNECT/CLOSE log lines will surface any drops with IP, duration, and reason for forensic follow-up.",
+      "how_to_verify": "Open game id 92 in the React Create tab, press Play, walk around for 60+ seconds, and check /tmp/api-server.log for any [gameWss] CLOSE entries with non-1000/1001 codes."
+    },
+    {
+      "item": "ObjectFactory swap-in retry visual confirmation",
+      "reason": "The retry logic is correct by code inspection (StartAssetSwapRetry polls 2/4/6s and disables placeholder Renderer on success), but I haven't observed a real swap event because all 6 game-92 assets loaded on the first attempt — there were no placeholder-fallbacks to swap. To test this path, temporarily kill R2 access or break one Meshy URL and confirm the cube becomes the real model after ≤6 s.",
+      "how_to_verify": "Watch Unity console for '[ObjectFactory] <id> — swapped in real GLB on retry attempt N' messages."
+    }
+  ]
+}

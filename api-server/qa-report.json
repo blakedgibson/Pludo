@@ -1,0 +1,1693 @@
+{
+  "runAt": "2026-05-06T00:30:41.293Z",
+  "totalGames": 7,
+  "games": [
+    {
+      "index": 0,
+      "prompt": "Build a platformer where you jump over lava pits to reach a castle",
+      "gameId": 23,
+      "jobId": "ba214a6d-61f5-4e27-868c-71b5c0431c2e",
+      "title": "Lava Leap to Glory",
+      "genre": "platformer",
+      "status": "done",
+      "timeline": {
+        "scriptReadyMs": 90000,
+        "doneMs": 120000,
+        "doneFromScriptReadyMs": 30000
+      },
+      "assetManifestCount": 6,
+      "assetsTotal": 6,
+      "assetsDone": 6,
+      "assetUrlCount": 0,
+      "checks": [
+        {
+          "category": "timeline",
+          "name": "script_ready within 30s",
+          "status": "FAIL",
+          "detail": "90000ms"
+        },
+        {
+          "category": "timeline",
+          "name": "done within 180s",
+          "status": "PASS",
+          "detail": "120000ms"
+        },
+        {
+          "category": "completion",
+          "name": "job completed without error",
+          "status": "PASS",
+          "detail": "done"
+        },
+        {
+          "category": "completion",
+          "name": "game object present",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "assets",
+          "name": "all assets resolved",
+          "status": "PASS",
+          "detail": "6/6 assets done (no R2 — in-memory or missing key)"
+        },
+        {
+          "category": "manifest",
+          "name": "asset count is 3–6",
+          "status": "PASS",
+          "detail": "count=6 unique model refs, assetsTotal=6"
+        },
+        {
+          "category": "manifest",
+          "name": "all prompts ≤600 chars",
+          "status": "PASS",
+          "detail": "all OK"
+        },
+        {
+          "category": "manifest",
+          "name": "no duplicate prompts",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "manifest",
+          "name": "is_humanoid flags correct",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "manifest",
+          "name": "asset themes match genre",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "no forbidden Roblox globals",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "luau",
+          "name": "no Luau type annotations",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "luau",
+          "name": "no orphaned model refs",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "no unused manifest assets",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "has Game.Win or Game.Lose",
+          "status": "FIXED",
+          "detail": "NEITHER present"
+        },
+        {
+          "category": "luau",
+          "name": "has Game.OnUpdate",
+          "status": "FIXED",
+          "detail": "MISSING"
+        },
+        {
+          "category": "luau",
+          "name": "has Object.Create calls",
+          "status": "PASS",
+          "detail": "count=14"
+        },
+        {
+          "category": "luau",
+          "name": "models have immediate SetScale",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "spatial",
+          "name": "all positions in bounds",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "spatial",
+          "name": "platformer gaps reasonable",
+          "status": "FAIL",
+          "detail": "hGap=58.3 between pos 0→1; hGap=40.0 between pos 1→2; hGap=56.6 between pos 10→11"
+        },
+        {
+          "category": "theme",
+          "name": "has terrain/ground asset",
+          "status": "PASS",
+          "detail": "found"
+        },
+        {
+          "category": "theme",
+          "name": "has interactive/obstacle asset",
+          "status": "PASS",
+          "detail": "found"
+        }
+      ],
+      "fixLog": [
+        "[script] Injected Game.Win() (was missing)",
+        "[script] Appended Game.OnUpdate (was missing)"
+      ],
+      "reValidationChecks": [
+        {
+          "name": "no forbidden Roblox globals",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "no --!strict",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Game.Win or Game.Lose",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Game.OnUpdate",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Object.Create calls",
+          "status": "PASS",
+          "detail": "count=14"
+        },
+        {
+          "name": "asset count is 3–6",
+          "status": "PASS",
+          "detail": "count=6"
+        },
+        {
+          "name": "all prompts ≤600 chars",
+          "status": "PASS",
+          "detail": ""
+        }
+      ],
+      "fixedManifest": [
+        {
+          "id": "volcanic_terrain",
+          "prompt": "volcanic terrain",
+          "is_humanoid": false
+        },
+        {
+          "id": "lava_pool",
+          "prompt": "lava pool",
+          "is_humanoid": false
+        },
+        {
+          "id": "stone_platform",
+          "prompt": "stone platform",
+          "is_humanoid": false
+        },
+        {
+          "id": "ember_rock",
+          "prompt": "ember rock",
+          "is_humanoid": false
+        },
+        {
+          "id": "checkpoint_flag",
+          "prompt": "checkpoint flag",
+          "is_humanoid": false
+        },
+        {
+          "id": "medieval_castle",
+          "prompt": "medieval castle",
+          "is_humanoid": false
+        }
+      ],
+      "fixedScriptSnippet": "-- PLATFORMER: Lava Leap to Glory\n-- Theme: Volcanic wasteland with lava pits leading to a medieval castle\n\nScene.SetSkybox(\"sunset\")\nScene.SetFog({r=0.6, g=0.2, b=0.05}, 0.03)\nScene.SetAmbientLight({r=1, g=0.4, b=0.1}, 0.8)\nScene.SetGravity(-12)\nAudio.PlayMusic(\"tense\")\n\nPlayer.SetSpeed(6)\nPlayer.SetJumpHeight(4)\n\n-- Spawn point\nPlayer.SetSpawnPoint(0, 4, 0)\n\n-- =====================\n-- GROUND / LAVA BASE\n-- =====================\n-- Invisible kill plane far below\nlocal killPlane = Object.Create...[truncated]"
+    },
+    {
+      "index": 1,
+      "prompt": "Build a tower defense where you protect a crystal from incoming robots",
+      "gameId": 20,
+      "jobId": "c53dc9ed-fb8c-41f7-9a4c-0e1f44a777f0",
+      "title": "Crystal Siege",
+      "genre": "survival",
+      "status": "done",
+      "timeline": {
+        "scriptReadyMs": 90000,
+        "doneMs": 120000,
+        "doneFromScriptReadyMs": 30000
+      },
+      "assetManifestCount": 6,
+      "assetsTotal": 6,
+      "assetsDone": 6,
+      "assetUrlCount": 0,
+      "checks": [
+        {
+          "category": "timeline",
+          "name": "script_ready within 30s",
+          "status": "FAIL",
+          "detail": "90000ms"
+        },
+        {
+          "category": "timeline",
+          "name": "done within 180s",
+          "status": "PASS",
+          "detail": "120000ms"
+        },
+        {
+          "category": "completion",
+          "name": "job completed without error",
+          "status": "PASS",
+          "detail": "done"
+        },
+        {
+          "category": "completion",
+          "name": "game object present",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "assets",
+          "name": "all assets resolved",
+          "status": "PASS",
+          "detail": "6/6 assets done (no R2 — in-memory or missing key)"
+        },
+        {
+          "category": "manifest",
+          "name": "asset count is 3–6",
+          "status": "PASS",
+          "detail": "count=6 unique model refs, assetsTotal=6"
+        },
+        {
+          "category": "manifest",
+          "name": "all prompts ≤600 chars",
+          "status": "PASS",
+          "detail": "all OK"
+        },
+        {
+          "category": "manifest",
+          "name": "no duplicate prompts",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "manifest",
+          "name": "is_humanoid flags correct",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "manifest",
+          "name": "asset themes match genre",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "no forbidden Roblox globals",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "luau",
+          "name": "no Luau type annotations",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "luau",
+          "name": "no orphaned model refs",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "no unused manifest assets",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "has Game.Win or Game.Lose",
+          "status": "FIXED",
+          "detail": "NEITHER present"
+        },
+        {
+          "category": "luau",
+          "name": "has Game.OnUpdate",
+          "status": "PASS",
+          "detail": "present"
+        },
+        {
+          "category": "luau",
+          "name": "has Object.Create calls",
+          "status": "PASS",
+          "detail": "count=9"
+        },
+        {
+          "category": "luau",
+          "name": "models have immediate SetScale",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "spatial",
+          "name": "all positions in bounds",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "theme",
+          "name": "has terrain/ground asset",
+          "status": "PASS",
+          "detail": "found"
+        },
+        {
+          "category": "theme",
+          "name": "has interactive/obstacle asset",
+          "status": "PASS",
+          "detail": "found"
+        },
+        {
+          "category": "theme",
+          "name": "has enemy-type asset",
+          "status": "PASS",
+          "detail": "found"
+        }
+      ],
+      "fixLog": [
+        "[manifest] Set is_humanoid=true for attack_robot (has character word)",
+        "[script] Injected Game.Win() (was missing)"
+      ],
+      "reValidationChecks": [
+        {
+          "name": "no forbidden Roblox globals",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "no --!strict",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Game.Win or Game.Lose",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Game.OnUpdate",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Object.Create calls",
+          "status": "PASS",
+          "detail": "count=9"
+        },
+        {
+          "name": "asset count is 3–6",
+          "status": "PASS",
+          "detail": "count=6"
+        },
+        {
+          "name": "all prompts ≤600 chars",
+          "status": "PASS",
+          "detail": ""
+        }
+      ],
+      "fixedManifest": [
+        {
+          "id": "scifi_terrain",
+          "prompt": "scifi terrain",
+          "is_humanoid": false
+        },
+        {
+          "id": "crystal_base",
+          "prompt": "crystal base",
+          "is_humanoid": false
+        },
+        {
+          "id": "spawn_gate",
+          "prompt": "spawn gate",
+          "is_humanoid": false
+        },
+        {
+          "id": "barrier_wall",
+          "prompt": "barrier wall",
+          "is_humanoid": false
+        },
+        {
+          "id": "attack_robot",
+          "prompt": "attack robot",
+          "is_humanoid": true
+        },
+        {
+          "id": "laser_turret",
+          "prompt": "laser turret",
+          "is_humanoid": false
+        }
+      ],
+      "fixedScriptSnippet": "-- Crystal Siege: Tower Defense\n-- Theme: Dark sci-fi military base, glowing blue crystal, robot invasion\n\nScene.SetSkybox(\"night\")\nScene.SetFog({r=0.02, g=0.05, b=0.12}, 0.04)\nScene.SetAmbientLight({r=0.1, g=0.2, b=0.5}, 0.6)\nScene.SetGravity(-9.81)\nAudio.PlayMusic(\"tense\")\n\n-- Game state\nlocal baseHealth = 20\nlocal wave = 0\nlocal enemiesAlive = 0\nlocal gameOver = false\nlocal waveInProgress = false\nlocal MAX_WAVES = 5\n\n-- ─── TERRAIN ────────────────────────────────────────────\nlocal ground = O...[truncated]"
+    },
+    {
+      "index": 2,
+      "prompt": "Build a wave survival where you shoot zombies in an abandoned warehouse",
+      "gameId": 19,
+      "jobId": "69a42ad6-15e1-4d1e-b6ee-65ad9e6b56a5",
+      "title": "Dead Warehouse Survival",
+      "genre": "survival",
+      "status": "done",
+      "timeline": {
+        "scriptReadyMs": 90000,
+        "doneMs": 120000,
+        "doneFromScriptReadyMs": 30000
+      },
+      "assetManifestCount": 6,
+      "assetsTotal": 6,
+      "assetsDone": 6,
+      "assetUrlCount": 0,
+      "checks": [
+        {
+          "category": "timeline",
+          "name": "script_ready within 30s",
+          "status": "FAIL",
+          "detail": "90000ms"
+        },
+        {
+          "category": "timeline",
+          "name": "done within 180s",
+          "status": "PASS",
+          "detail": "120000ms"
+        },
+        {
+          "category": "completion",
+          "name": "job completed without error",
+          "status": "PASS",
+          "detail": "done"
+        },
+        {
+          "category": "completion",
+          "name": "game object present",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "assets",
+          "name": "all assets resolved",
+          "status": "PASS",
+          "detail": "6/6 assets done (no R2 — in-memory or missing key)"
+        },
+        {
+          "category": "manifest",
+          "name": "asset count is 3–6",
+          "status": "PASS",
+          "detail": "count=6 unique model refs, assetsTotal=6"
+        },
+        {
+          "category": "manifest",
+          "name": "all prompts ≤600 chars",
+          "status": "PASS",
+          "detail": "all OK"
+        },
+        {
+          "category": "manifest",
+          "name": "no duplicate prompts",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "manifest",
+          "name": "is_humanoid flags correct",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "manifest",
+          "name": "asset themes match genre",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "no forbidden Roblox globals",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "luau",
+          "name": "no Luau type annotations",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "luau",
+          "name": "no orphaned model refs",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "no unused manifest assets",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "has Game.Win or Game.Lose",
+          "status": "FIXED",
+          "detail": "NEITHER present"
+        },
+        {
+          "category": "luau",
+          "name": "has Game.OnUpdate",
+          "status": "PASS",
+          "detail": "present"
+        },
+        {
+          "category": "luau",
+          "name": "has Object.Create calls",
+          "status": "PASS",
+          "detail": "count=9"
+        },
+        {
+          "category": "luau",
+          "name": "models have immediate SetScale",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "spatial",
+          "name": "all positions in bounds",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "theme",
+          "name": "has terrain/ground asset",
+          "status": "PASS",
+          "detail": "found"
+        },
+        {
+          "category": "theme",
+          "name": "has interactive/obstacle asset",
+          "status": "PASS",
+          "detail": "found"
+        },
+        {
+          "category": "theme",
+          "name": "has enemy-type asset",
+          "status": "PASS",
+          "detail": "found"
+        }
+      ],
+      "fixLog": [
+        "[manifest] Set is_humanoid=true for zombie (has character word)",
+        "[script] Injected Game.Win() (was missing)",
+        "[spatial] Reset y=-50 to 1.0 in non-terrain SetPosition"
+      ],
+      "reValidationChecks": [
+        {
+          "name": "no forbidden Roblox globals",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "no --!strict",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Game.Win or Game.Lose",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Game.OnUpdate",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Object.Create calls",
+          "status": "PASS",
+          "detail": "count=9"
+        },
+        {
+          "name": "asset count is 3–6",
+          "status": "PASS",
+          "detail": "count=6"
+        },
+        {
+          "name": "all prompts ≤600 chars",
+          "status": "PASS",
+          "detail": ""
+        }
+      ],
+      "fixedManifest": [
+        {
+          "id": "warehouse_floor",
+          "prompt": "warehouse floor",
+          "is_humanoid": false
+        },
+        {
+          "id": "warehouse_wall",
+          "prompt": "warehouse wall",
+          "is_humanoid": false
+        },
+        {
+          "id": "metal_shelf",
+          "prompt": "metal shelf",
+          "is_humanoid": false
+        },
+        {
+          "id": "wooden_crate",
+          "prompt": "wooden crate",
+          "is_humanoid": false
+        },
+        {
+          "id": "barrel",
+          "prompt": "barrel",
+          "is_humanoid": false
+        },
+        {
+          "id": "zombie",
+          "prompt": "zombie",
+          "is_humanoid": true
+        }
+      ],
+      "fixedScriptSnippet": "-- Dead Warehouse Survival\n-- Abandoned industrial warehouse zombie wave shooter\n\nScene.SetSkybox(\"overcast\")\nScene.SetFog({r=0.08, g=0.10, b=0.08}, 0.045)\nScene.SetAmbientLight({r=0.15, g=0.18, b=0.12}, 0.4)\nScene.SetGravity(-9.81)\nAudio.PlayMusic(\"tense\")\n\nPlayer.SetSpeed(7)\nPlayer.SetJumpHeight(2.5)\nPlayer.SetHealth(100)\n\n-- === ARENA FLOOR ===\nlocal floorTemplate = Object.Create(\"model:warehouse_floor\")\nfloorTemplate:SetScale(20, 0.5, 20)\nfloorTemplate:SetPosition(0, -0.25, 0)\nfloorTemplate:...[truncated]"
+    },
+    {
+      "index": 3,
+      "prompt": "Build a tycoon where you collect coins and upgrade a pizza shop",
+      "gameId": 21,
+      "jobId": "26be17a0-2582-464e-bc7a-62ba89e1e518",
+      "title": "Pizza Shop Tycoon",
+      "genre": "adventure",
+      "status": "done",
+      "timeline": {
+        "scriptReadyMs": 90000,
+        "doneMs": 120000,
+        "doneFromScriptReadyMs": 30000
+      },
+      "assetManifestCount": 6,
+      "assetsTotal": 6,
+      "assetsDone": 6,
+      "assetUrlCount": 0,
+      "checks": [
+        {
+          "category": "timeline",
+          "name": "script_ready within 30s",
+          "status": "FAIL",
+          "detail": "90000ms"
+        },
+        {
+          "category": "timeline",
+          "name": "done within 180s",
+          "status": "PASS",
+          "detail": "120000ms"
+        },
+        {
+          "category": "completion",
+          "name": "job completed without error",
+          "status": "PASS",
+          "detail": "done"
+        },
+        {
+          "category": "completion",
+          "name": "game object present",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "assets",
+          "name": "all assets resolved",
+          "status": "PASS",
+          "detail": "6/6 assets done (no R2 — in-memory or missing key)"
+        },
+        {
+          "category": "manifest",
+          "name": "asset count is 3–6",
+          "status": "PASS",
+          "detail": "count=6 unique model refs, assetsTotal=6"
+        },
+        {
+          "category": "manifest",
+          "name": "all prompts ≤600 chars",
+          "status": "PASS",
+          "detail": "all OK"
+        },
+        {
+          "category": "manifest",
+          "name": "no duplicate prompts",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "manifest",
+          "name": "is_humanoid flags correct",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "manifest",
+          "name": "asset themes match genre",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "no forbidden Roblox globals",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "luau",
+          "name": "no Luau type annotations",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "luau",
+          "name": "no orphaned model refs",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "no unused manifest assets",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "has Game.Win or Game.Lose",
+          "status": "FIXED",
+          "detail": "NEITHER present"
+        },
+        {
+          "category": "luau",
+          "name": "has Game.OnUpdate",
+          "status": "PASS",
+          "detail": "present"
+        },
+        {
+          "category": "luau",
+          "name": "has Object.Create calls",
+          "status": "PASS",
+          "detail": "count=13"
+        },
+        {
+          "category": "luau",
+          "name": "models have immediate SetScale",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "spatial",
+          "name": "all positions in bounds",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "theme",
+          "name": "has terrain/ground asset",
+          "status": "PASS",
+          "detail": "found"
+        },
+        {
+          "category": "theme",
+          "name": "has interactive/obstacle asset",
+          "status": "PASS",
+          "detail": "found"
+        }
+      ],
+      "fixLog": [
+        "[script] Injected Game.Win() (was missing)"
+      ],
+      "reValidationChecks": [
+        {
+          "name": "no forbidden Roblox globals",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "no --!strict",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Game.Win or Game.Lose",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Game.OnUpdate",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Object.Create calls",
+          "status": "PASS",
+          "detail": "count=13"
+        },
+        {
+          "name": "asset count is 3–6",
+          "status": "PASS",
+          "detail": "count=6"
+        },
+        {
+          "name": "all prompts ≤600 chars",
+          "status": "PASS",
+          "detail": ""
+        }
+      ],
+      "fixedManifest": [
+        {
+          "id": "pizza_terrain",
+          "prompt": "pizza terrain",
+          "is_humanoid": false
+        },
+        {
+          "id": "pizza_shop",
+          "prompt": "pizza shop",
+          "is_humanoid": false
+        },
+        {
+          "id": "pizza_oven",
+          "prompt": "pizza oven",
+          "is_humanoid": false
+        },
+        {
+          "id": "delivery_scooter",
+          "prompt": "delivery scooter",
+          "is_humanoid": false
+        },
+        {
+          "id": "coin_pile",
+          "prompt": "coin pile",
+          "is_humanoid": false
+        },
+        {
+          "id": "upgrade_station",
+          "prompt": "upgrade station",
+          "is_humanoid": false
+        }
+      ],
+      "fixedScriptSnippet": "-- PIZZA SHOP TYCOON\n-- Theme: Build and upgrade an Italian pizzeria empire by collecting coins and leveling up your shop\n\nScene.SetSkybox(\"sunset\")\nScene.SetFog({r=0.9, g=0.7, b=0.4}, 0.015)\nScene.SetAmbientLight({r=1, g=0.85, b=0.6}, 0.8)\nScene.SetGravity(-9.81)\nAudio.PlayMusic(\"peaceful\")\n\nPlayer.SetSpeed(6)\nPlayer.SetJumpHeight(2)\nPlayer.SetSpawnPoint(0, 2, 0)\n\n-- Resource counters\nlocal coins = 0\nlocal production = 1\nlocal level = 1\nlocal WIN_LEVEL = 10\nlocal gameWon = false\n\n-- ===========...[truncated]"
+    },
+    {
+      "index": 4,
+      "prompt": "Build a racer where you drive a sports car through a neon city",
+      "gameId": 24,
+      "jobId": "e0ab1a68-b9ff-46bb-b4ad-238cb55eb77f",
+      "title": "Neon City Racer",
+      "genre": "racer",
+      "status": "done",
+      "timeline": {
+        "scriptReadyMs": 90000,
+        "doneMs": 120000,
+        "doneFromScriptReadyMs": 30000
+      },
+      "assetManifestCount": 6,
+      "assetsTotal": 6,
+      "assetsDone": 6,
+      "assetUrlCount": 0,
+      "checks": [
+        {
+          "category": "timeline",
+          "name": "script_ready within 30s",
+          "status": "FAIL",
+          "detail": "90000ms"
+        },
+        {
+          "category": "timeline",
+          "name": "done within 180s",
+          "status": "PASS",
+          "detail": "120000ms"
+        },
+        {
+          "category": "completion",
+          "name": "job completed without error",
+          "status": "PASS",
+          "detail": "done"
+        },
+        {
+          "category": "completion",
+          "name": "game object present",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "assets",
+          "name": "all assets resolved",
+          "status": "PASS",
+          "detail": "6/6 assets done (no R2 — in-memory or missing key)"
+        },
+        {
+          "category": "manifest",
+          "name": "asset count is 3–6",
+          "status": "PASS",
+          "detail": "count=6 unique model refs, assetsTotal=6"
+        },
+        {
+          "category": "manifest",
+          "name": "all prompts ≤600 chars",
+          "status": "PASS",
+          "detail": "all OK"
+        },
+        {
+          "category": "manifest",
+          "name": "no duplicate prompts",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "manifest",
+          "name": "is_humanoid flags correct",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "manifest",
+          "name": "asset themes match genre",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "no forbidden Roblox globals",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "luau",
+          "name": "no Luau type annotations",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "luau",
+          "name": "no orphaned model refs",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "no unused manifest assets",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "has Game.Win or Game.Lose",
+          "status": "FIXED",
+          "detail": "NEITHER present"
+        },
+        {
+          "category": "luau",
+          "name": "has Game.OnUpdate",
+          "status": "PASS",
+          "detail": "present"
+        },
+        {
+          "category": "luau",
+          "name": "has Object.Create calls",
+          "status": "PASS",
+          "detail": "count=10"
+        },
+        {
+          "category": "luau",
+          "name": "models have immediate SetScale",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "spatial",
+          "name": "all positions in bounds",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "theme",
+          "name": "has terrain/ground asset",
+          "status": "FAIL",
+          "detail": "no terrain-like asset in manifest"
+        },
+        {
+          "category": "theme",
+          "name": "has interactive/obstacle asset",
+          "status": "PASS",
+          "detail": "found"
+        }
+      ],
+      "fixLog": [
+        "[script] Injected Game.Win() (was missing)"
+      ],
+      "reValidationChecks": [
+        {
+          "name": "no forbidden Roblox globals",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "no --!strict",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Game.Win or Game.Lose",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Game.OnUpdate",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Object.Create calls",
+          "status": "PASS",
+          "detail": "count=10"
+        },
+        {
+          "name": "asset count is 3–6",
+          "status": "PASS",
+          "detail": "count=6"
+        },
+        {
+          "name": "all prompts ≤600 chars",
+          "status": "PASS",
+          "detail": ""
+        }
+      ],
+      "fixedManifest": [
+        {
+          "id": "neon_road",
+          "prompt": "neon road",
+          "is_humanoid": false
+        },
+        {
+          "id": "sports_car",
+          "prompt": "sports car",
+          "is_humanoid": false
+        },
+        {
+          "id": "skyscraper",
+          "prompt": "skyscraper",
+          "is_humanoid": false
+        },
+        {
+          "id": "highway_barrier",
+          "prompt": "highway barrier",
+          "is_humanoid": false
+        },
+        {
+          "id": "street_lamp",
+          "prompt": "street lamp",
+          "is_humanoid": false
+        },
+        {
+          "id": "speed_pad",
+          "prompt": "speed pad",
+          "is_humanoid": false
+        }
+      ],
+      "fixedScriptSnippet": "-- RACER: Neon City Racer\n-- Theme: Cyberpunk neon city circuit, sports car, 3 laps\n\nScene.SetSkybox(\"night\")\nScene.SetFog({r=0.02, g=0.0, b=0.08}, 0.018)\nScene.SetAmbientLight({r=0.1, g=0.0, b=0.2}, 0.6)\nAudio.PlayMusic(\"epic\")\n\nPlayer.SetSpeed(16)\nPlayer.SetJumpHeight(1)\n\n-- ============================================================\n-- TRACK SURFACE TILES (Meshy neon road tiles)\n-- ============================================================\nlocal function makeRoad(x, z, sx, sz, ry)\n  local ...[truncated]"
+    },
+    {
+      "index": 5,
+      "prompt": "Build a puzzle escape where you solve riddles to exit a haunted mansion",
+      "gameId": 25,
+      "jobId": "d1f41b4e-4ea9-464d-ac7e-dfaaad89460c",
+      "title": "Haunted Mansion Escape",
+      "genre": "puzzle",
+      "status": "done",
+      "timeline": {
+        "scriptReadyMs": 90000,
+        "doneMs": 120000,
+        "doneFromScriptReadyMs": 30000
+      },
+      "assetManifestCount": 6,
+      "assetsTotal": 6,
+      "assetsDone": 6,
+      "assetUrlCount": 0,
+      "checks": [
+        {
+          "category": "timeline",
+          "name": "script_ready within 30s",
+          "status": "FAIL",
+          "detail": "90000ms"
+        },
+        {
+          "category": "timeline",
+          "name": "done within 180s",
+          "status": "PASS",
+          "detail": "120000ms"
+        },
+        {
+          "category": "completion",
+          "name": "job completed without error",
+          "status": "PASS",
+          "detail": "done"
+        },
+        {
+          "category": "completion",
+          "name": "game object present",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "assets",
+          "name": "all assets resolved",
+          "status": "PASS",
+          "detail": "6/6 assets done (no R2 — in-memory or missing key)"
+        },
+        {
+          "category": "manifest",
+          "name": "asset count is 3–6",
+          "status": "PASS",
+          "detail": "count=6 unique model refs, assetsTotal=6"
+        },
+        {
+          "category": "manifest",
+          "name": "all prompts ≤600 chars",
+          "status": "PASS",
+          "detail": "all OK"
+        },
+        {
+          "category": "manifest",
+          "name": "no duplicate prompts",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "manifest",
+          "name": "is_humanoid flags correct",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "manifest",
+          "name": "asset themes match genre",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "no forbidden Roblox globals",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "luau",
+          "name": "no Luau type annotations",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "luau",
+          "name": "no orphaned model refs",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "no unused manifest assets",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "has Game.Win or Game.Lose",
+          "status": "FIXED",
+          "detail": "NEITHER present"
+        },
+        {
+          "category": "luau",
+          "name": "has Game.OnUpdate",
+          "status": "PASS",
+          "detail": "present"
+        },
+        {
+          "category": "luau",
+          "name": "has Object.Create calls",
+          "status": "PASS",
+          "detail": "count=33"
+        },
+        {
+          "category": "luau",
+          "name": "models have immediate SetScale",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "spatial",
+          "name": "all positions in bounds",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "theme",
+          "name": "has terrain/ground asset",
+          "status": "PASS",
+          "detail": "found"
+        },
+        {
+          "category": "theme",
+          "name": "has interactive/obstacle asset",
+          "status": "PASS",
+          "detail": "found"
+        }
+      ],
+      "fixLog": [
+        "[script] Injected Game.Win() (was missing)"
+      ],
+      "reValidationChecks": [
+        {
+          "name": "no forbidden Roblox globals",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "no --!strict",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Game.Win or Game.Lose",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Game.OnUpdate",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Object.Create calls",
+          "status": "PASS",
+          "detail": "count=33"
+        },
+        {
+          "name": "asset count is 3–6",
+          "status": "PASS",
+          "detail": "count=6"
+        },
+        {
+          "name": "all prompts ≤600 chars",
+          "status": "PASS",
+          "detail": ""
+        }
+      ],
+      "fixedManifest": [
+        {
+          "id": "mansion_floor",
+          "prompt": "mansion floor",
+          "is_humanoid": false
+        },
+        {
+          "id": "mansion_wall",
+          "prompt": "mansion wall",
+          "is_humanoid": false
+        },
+        {
+          "id": "candelabra",
+          "prompt": "candelabra",
+          "is_humanoid": false
+        },
+        {
+          "id": "altar_stone",
+          "prompt": "altar stone",
+          "is_humanoid": false
+        },
+        {
+          "id": "ghost_spirit",
+          "prompt": "ghost spirit",
+          "is_humanoid": false
+        },
+        {
+          "id": "ornate_door",
+          "prompt": "ornate door",
+          "is_humanoid": false
+        }
+      ],
+      "fixedScriptSnippet": "-- PUZZLE / ESCAPE ROOM\n-- Theme: A cursed Victorian haunted mansion. Three supernatural puzzles must be solved to unlock the exit door and escape.\n\nScene.SetSkybox(\"night\")\nScene.SetAmbientLight({r=0.2, g=0.1, b=0.3}, 0.5)\nScene.SetFog({r=0.05, g=0.02, b=0.08}, 0.04)\nAudio.PlayMusic(\"mysterious\")\n\nPlayer.SetSpeed(4)\nPlayer.SetJumpHeight(2)\n\n-- ───────────────────────────────────────────\n-- ROOM GEOMETRY — all Meshy models\n-- ───────────────────────────────────────────\n\n-- Main floor\nlocal floor...[truncated]"
+    },
+    {
+      "index": 6,
+      "prompt": "Build an RPG where you explore a forest and fight wolves",
+      "gameId": 22,
+      "jobId": "877ab95c-a740-40b3-8a53-9b66fc43574b",
+      "title": "Forest Wolf Hunter",
+      "genre": "adventure",
+      "status": "done",
+      "timeline": {
+        "scriptReadyMs": 90000,
+        "doneMs": 120000,
+        "doneFromScriptReadyMs": 30000
+      },
+      "assetManifestCount": 6,
+      "assetsTotal": 6,
+      "assetsDone": 6,
+      "assetUrlCount": 0,
+      "checks": [
+        {
+          "category": "timeline",
+          "name": "script_ready within 30s",
+          "status": "FAIL",
+          "detail": "90000ms"
+        },
+        {
+          "category": "timeline",
+          "name": "done within 180s",
+          "status": "PASS",
+          "detail": "120000ms"
+        },
+        {
+          "category": "completion",
+          "name": "job completed without error",
+          "status": "PASS",
+          "detail": "done"
+        },
+        {
+          "category": "completion",
+          "name": "game object present",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "assets",
+          "name": "all assets resolved",
+          "status": "PASS",
+          "detail": "6/6 assets done (no R2 — in-memory or missing key)"
+        },
+        {
+          "category": "manifest",
+          "name": "asset count is 3–6",
+          "status": "PASS",
+          "detail": "count=6 unique model refs, assetsTotal=6"
+        },
+        {
+          "category": "manifest",
+          "name": "all prompts ≤600 chars",
+          "status": "PASS",
+          "detail": "all OK"
+        },
+        {
+          "category": "manifest",
+          "name": "no duplicate prompts",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "manifest",
+          "name": "is_humanoid flags correct",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "manifest",
+          "name": "asset themes match genre",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "no forbidden Roblox globals",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "luau",
+          "name": "no Luau type annotations",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "luau",
+          "name": "no orphaned model refs",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "no unused manifest assets",
+          "status": "PASS",
+          "detail": "OK"
+        },
+        {
+          "category": "luau",
+          "name": "has Game.Win or Game.Lose",
+          "status": "FIXED",
+          "detail": "NEITHER present"
+        },
+        {
+          "category": "luau",
+          "name": "has Game.OnUpdate",
+          "status": "PASS",
+          "detail": "present"
+        },
+        {
+          "category": "luau",
+          "name": "has Object.Create calls",
+          "status": "PASS",
+          "detail": "count=20"
+        },
+        {
+          "category": "luau",
+          "name": "models have immediate SetScale",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "spatial",
+          "name": "all positions in bounds",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "category": "theme",
+          "name": "has terrain/ground asset",
+          "status": "PASS",
+          "detail": "found"
+        },
+        {
+          "category": "theme",
+          "name": "has interactive/obstacle asset",
+          "status": "PASS",
+          "detail": "found"
+        }
+      ],
+      "fixLog": [
+        "[script] Stripped type annotations from function params",
+        "[script] Injected Game.Win() (was missing)"
+      ],
+      "reValidationChecks": [
+        {
+          "name": "no forbidden Roblox globals",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "no --!strict",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Game.Win or Game.Lose",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Game.OnUpdate",
+          "status": "PASS",
+          "detail": ""
+        },
+        {
+          "name": "has Object.Create calls",
+          "status": "PASS",
+          "detail": "count=20"
+        },
+        {
+          "name": "asset count is 3–6",
+          "status": "PASS",
+          "detail": "count=6"
+        },
+        {
+          "name": "all prompts ≤600 chars",
+          "status": "PASS",
+          "detail": ""
+        }
+      ],
+      "fixedManifest": [
+        {
+          "id": "forest_terrain",
+          "prompt": "forest terrain",
+          "is_humanoid": false
+        },
+        {
+          "id": "ancient_tree",
+          "prompt": "ancient tree",
+          "is_humanoid": false
+        },
+        {
+          "id": "stone_shrine",
+          "prompt": "stone shrine",
+          "is_humanoid": false
+        },
+        {
+          "id": "rune_stone",
+          "prompt": "rune stone",
+          "is_humanoid": false
+        },
+        {
+          "id": "wolf",
+          "prompt": "wolf",
+          "is_humanoid": false
+        },
+        {
+          "id": "alpha_wolf",
+          "prompt": "alpha wolf",
+          "is_humanoid": false
+        }
+      ],
+      "fixedScriptSnippet": "-- Forest Wolf Hunter RPG\n-- Explore the ancient forest, collect rune stones, defeat the Alpha Wolf\n\nScene.SetSkybox(\"overcast\")\nScene.SetFog({r=0.15, g=0.2, b=0.12}, 0.04)\nScene.SetAmbientLight({r=0.3, g=0.45, b=0.3}, 0.7)\nAudio.PlayMusic(\"mysterious\")\nEnvironment.SetTimeOfDay(18)\n\nPlayer.SetSpeed(5)\nPlayer.SetJumpHeight(3)\nPlayer.SetHealth(100)\n\n-- Key light: late afternoon through canopy\nlocal sunLight = Light.Create(\"directional\", 0, 20, 0)\nsunLight:SetColor(0.6, 0.5, 0.3)\nsunLight:SetIntens...[truncated]"
+    }
+  ],
+  "summary": {
+    "totalChecks": 150,
+    "passed": 133,
+    "failed": 9,
+    "fixed": 8,
+    "needsManualReview": 9
+  },
+  "failuresByCategory": {
+    "timeline": 7,
+    "luau": 8,
+    "spatial": 1,
+    "theme": 1
+  },
+  "fixes": [
+    {
+      "gameId": 23,
+      "jobId": "ba214a6d-61f5-4e27-868c-71b5c0431c2e",
+      "fix": "[script] Injected Game.Win() (was missing)"
+    },
+    {
+      "gameId": 23,
+      "jobId": "ba214a6d-61f5-4e27-868c-71b5c0431c2e",
+      "fix": "[script] Appended Game.OnUpdate (was missing)"
+    },
+    {
+      "gameId": 20,
+      "jobId": "c53dc9ed-fb8c-41f7-9a4c-0e1f44a777f0",
+      "fix": "[manifest] Set is_humanoid=true for attack_robot (has character word)"
+    },
+    {
+      "gameId": 20,
+      "jobId": "c53dc9ed-fb8c-41f7-9a4c-0e1f44a777f0",
+      "fix": "[script] Injected Game.Win() (was missing)"
+    },
+    {
+      "gameId": 19,
+      "jobId": "69a42ad6-15e1-4d1e-b6ee-65ad9e6b56a5",
+      "fix": "[manifest] Set is_humanoid=true for zombie (has character word)"
+    },
+    {
+      "gameId": 19,
+      "jobId": "69a42ad6-15e1-4d1e-b6ee-65ad9e6b56a5",
+      "fix": "[script] Injected Game.Win() (was missing)"
+    },
+    {
+      "gameId": 19,
+      "jobId": "69a42ad6-15e1-4d1e-b6ee-65ad9e6b56a5",
+      "fix": "[spatial] Reset y=-50 to 1.0 in non-terrain SetPosition"
+    },
+    {
+      "gameId": 21,
+      "jobId": "26be17a0-2582-464e-bc7a-62ba89e1e518",
+      "fix": "[script] Injected Game.Win() (was missing)"
+    },
+    {
+      "gameId": 24,
+      "jobId": "e0ab1a68-b9ff-46bb-b4ad-238cb55eb77f",
+      "fix": "[script] Injected Game.Win() (was missing)"
+    },
+    {
+      "gameId": 25,
+      "jobId": "d1f41b4e-4ea9-464d-ac7e-dfaaad89460c",
+      "fix": "[script] Injected Game.Win() (was missing)"
+    },
+    {
+      "gameId": 22,
+      "jobId": "877ab95c-a740-40b3-8a53-9b66fc43574b",
+      "fix": "[script] Stripped type annotations from function params"
+    },
+    {
+      "gameId": 22,
+      "jobId": "877ab95c-a740-40b3-8a53-9b66fc43574b",
+      "fix": "[script] Injected Game.Win() (was missing)"
+    }
+  ],
+  "manualReviewItems": [
+    {
+      "gameId": 23,
+      "jobId": "ba214a6d-61f5-4e27-868c-71b5c0431c2e",
+      "check": "script_ready within 30s",
+      "detail": "90000ms"
+    },
+    {
+      "gameId": 23,
+      "jobId": "ba214a6d-61f5-4e27-868c-71b5c0431c2e",
+      "check": "platformer gaps reasonable",
+      "detail": "hGap=58.3 between pos 0→1; hGap=40.0 between pos 1→2; hGap=56.6 between pos 10→11"
+    },
+    {
+      "gameId": 20,
+      "jobId": "c53dc9ed-fb8c-41f7-9a4c-0e1f44a777f0",
+      "check": "script_ready within 30s",
+      "detail": "90000ms"
+    },
+    {
+      "gameId": 19,
+      "jobId": "69a42ad6-15e1-4d1e-b6ee-65ad9e6b56a5",
+      "check": "script_ready within 30s",
+      "detail": "90000ms"
+    },
+    {
+      "gameId": 21,
+      "jobId": "26be17a0-2582-464e-bc7a-62ba89e1e518",
+      "check": "script_ready within 30s",
+      "detail": "90000ms"
+    },
+    {
+      "gameId": 24,
+      "jobId": "e0ab1a68-b9ff-46bb-b4ad-238cb55eb77f",
+      "check": "script_ready within 30s",
+      "detail": "90000ms"
+    },
+    {
+      "gameId": 24,
+      "jobId": "e0ab1a68-b9ff-46bb-b4ad-238cb55eb77f",
+      "check": "has terrain/ground asset",
+      "detail": "no terrain-like asset in manifest"
+    },
+    {
+      "gameId": 25,
+      "jobId": "d1f41b4e-4ea9-464d-ac7e-dfaaad89460c",
+      "check": "script_ready within 30s",
+      "detail": "90000ms"
+    },
+    {
+      "gameId": 22,
+      "jobId": "877ab95c-a740-40b3-8a53-9b66fc43574b",
+      "check": "script_ready within 30s",
+      "detail": "90000ms"
+    }
+  ]
+}

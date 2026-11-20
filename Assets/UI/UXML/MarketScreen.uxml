@@ -1,0 +1,127 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Style src="../USS/MobileStyles.uss" />
+
+    <ui:VisualElement name="market-root" class="screen-root">
+
+        <!-- List view -->
+        <ui:VisualElement name="market-list-view" style="flex-grow:1; flex-direction:column; overflow:hidden;">
+
+            <!-- Header with close button -->
+            <ui:VisualElement class="screen-header">
+                <ui:Label class="screen-title" text="Marketplace" />
+                <ui:Button name="btn-close-market" class="header-icon-btn">
+                    <ui:Label class="header-icon-label" text="&#x2715;" />
+                </ui:Button>
+            </ui:VisualElement>
+
+            <!-- Search -->
+            <ui:VisualElement class="search-wrap">
+                <ui:Label class="search-icon" text="&#x1F50D;" />
+                <ui:TextField name="search-field" class="search-field"
+                              placeholder-text="Search items..." />
+                <ui:Button name="search-clear" class="search-clear-btn hidden" text="&#x2715;" />
+            </ui:VisualElement>
+
+            <!-- Category filter (slot-based) -->
+            <ui:ScrollView name="category-scroll" class="filters-scroll"
+                           horizontal="true" vertical="false"
+                           vertical-scroller-visibility="Hidden"
+                           horizontal-scroller-visibility="Hidden"
+                           mouse-wheel-scroll-size="60">
+                <ui:VisualElement name="category-inner" class="filters-inner" />
+            </ui:ScrollView>
+
+            <!-- Rarity filter -->
+            <ui:ScrollView name="rarity-scroll" class="filters-scroll"
+                           horizontal="true" vertical="false"
+                           vertical-scroller-visibility="Hidden"
+                           horizontal-scroller-visibility="Hidden"
+                           mouse-wheel-scroll-size="60">
+                <ui:VisualElement name="rarity-inner" class="filters-inner" />
+            </ui:ScrollView>
+
+            <!-- Loading -->
+            <ui:VisualElement name="items-loading" class="items-grid hidden">
+                <ui:VisualElement class="skeleton-item-card"><ui:VisualElement class="skeleton-item-thumb" /></ui:VisualElement>
+                <ui:VisualElement class="skeleton-item-card"><ui:VisualElement class="skeleton-item-thumb" /></ui:VisualElement>
+                <ui:VisualElement class="skeleton-item-card"><ui:VisualElement class="skeleton-item-thumb" /></ui:VisualElement>
+                <ui:VisualElement class="skeleton-item-card"><ui:VisualElement class="skeleton-item-thumb" /></ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- Empty -->
+            <ui:VisualElement name="items-empty" class="empty-box hidden">
+                <ui:Label class="empty-icon" text="&#x1F4E6;" />
+                <ui:Label class="empty-title" text="No items found" />
+                <ui:Label class="empty-desc" text="Try changing your filters" />
+            </ui:VisualElement>
+
+            <!-- Items grid -->
+            <ui:ScrollView name="items-scroll" class="scroll-content hidden"
+                           vertical="true" horizontal="false"
+                           vertical-scroller-visibility="Hidden"
+                           horizontal-scroller-visibility="Hidden"
+                           mouse-wheel-scroll-size="120">
+                <ui:VisualElement name="items-grid" class="items-grid" />
+                <ui:VisualElement class="scroll-pad-bottom" />
+            </ui:ScrollView>
+
+        </ui:VisualElement>
+
+        <!-- Detail view (hidden by default) -->
+        <ui:VisualElement name="detail-view" class="hidden"
+                          style="flex-grow:1; flex-direction:column; overflow:hidden;">
+
+            <ui:ScrollView vertical="true" horizontal="false"
+                           vertical-scroller-visibility="Hidden"
+                           horizontal-scroller-visibility="Hidden"
+                           mouse-wheel-scroll-size="120"
+                           style="flex-grow:1;">
+
+                <!-- Back button -->
+                <ui:Button name="detail-back" class="detail-back-btn">
+                    <ui:Label text="&#x2190; Back"
+                              style="font-size:16px; color:rgb(232,234,246);" />
+                </ui:Button>
+
+                <!-- Image area -->
+                <ui:VisualElement name="detail-img" class="detail-img-area">
+                    <ui:Label name="detail-img-placeholder" class="empty-icon" text="&#x1F4E6;" />
+                </ui:VisualElement>
+
+                <!-- Info body -->
+                <ui:VisualElement class="detail-body">
+                    <ui:VisualElement class="detail-title-row">
+                        <ui:Label name="detail-title" class="detail-title" text="" />
+                        <ui:VisualElement name="detail-rarity-badge" class="rarity-badge">
+                            <ui:Label name="detail-rarity-text" class="rarity-badge-text" text="" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:Label name="detail-category" class="detail-category-label" text="" />
+                    <ui:Label name="detail-desc" class="detail-desc" text="" />
+
+                    <ui:VisualElement class="detail-card">
+                        <ui:VisualElement class="detail-row">
+                            <ui:Label class="detail-row-label" text="Creator" />
+                            <ui:Label name="detail-creator" class="detail-row-value" text="" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="detail-row">
+                            <ui:Label class="detail-row-label" text="Price" />
+                            <ui:Label name="detail-price" class="detail-row-value cyan" text="" />
+                        </ui:VisualElement>
+                        <ui:VisualElement name="detail-tags-wrap" class="tags-wrap" />
+                    </ui:VisualElement>
+
+                    <!-- Equip / Unequip button -->
+                    <ui:Button name="btn-equip" class="neon-btn" style="margin-top:16px;">
+                        <ui:Label name="btn-equip-label" class="neon-btn-label" text="Equip Item" />
+                    </ui:Button>
+
+                </ui:VisualElement>
+
+                <ui:VisualElement class="scroll-pad-bottom" />
+            </ui:ScrollView>
+
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>

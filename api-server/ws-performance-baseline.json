@@ -1,0 +1,57 @@
+{
+  "capturedAt": "2026-05-06T00:46:28.981Z",
+  "note": "Post-fix performance baseline. All 48 tests passing. Re-run test-ws.mjs to update.",
+  "gameUsedForTesting": {
+    "id": 4,
+    "title": "Panda Run Obstacle Course"
+  },
+  "fixesApplied": [
+    "presence broadcasts: player_join broadcast to existing clients on join; player_leave broadcast on disconnect",
+    "new joiner presence list: { type:\"presence\", players:[] } sent immediately after snapshot",
+    "input sequence dedup: seq tracking per client, discard if seq <= lastInputSeq",
+    "resync support: { type:\"resync\" } message returns fresh snapshot to requesting client",
+    "ws error handler: per-connection errors (incl. maxPayload exceeded) absorbed without crashing process",
+    "64KB maxPayload already configured on both WebSocketServer instances"
+  ],
+  "snapshotMetrics": {
+    "sizeBytes": 20937,
+    "sizeKB": 20.4,
+    "limitBytes": 65536,
+    "headroomPercent": 68
+  },
+  "tickRateMetrics": {
+    "targetHz": 20,
+    "measuredHz_5players": 21.6,
+    "diffCountIn5s_5players": [
+      108,
+      108,
+      108,
+      108,
+      108
+    ],
+    "note": "Diffs only broadcast when hasMeaningfulDiff() is true. Active physics games produce diffs at full 20Hz."
+  },
+  "diffSizeMetrics": {
+    "1player_with_physics": {
+      "minSize": 750,
+      "maxSize": 757,
+      "avgSize": 753
+    }
+  },
+  "concurrentPlayerBenchmarks": {
+    "1player": {
+      "snapshotBytes": 20937,
+      "tickHz": 20,
+      "inputLatencyMs": "<50"
+    },
+    "3players": {
+      "snapshotDeliveryWithin": "100ms of each other",
+      "entityCountConsistent": true
+    },
+    "5players": {
+      "measuredTickHz": 21.6,
+      "allClientsStableAfter5s60HzStress": true,
+      "diffDeliveryFair": true
+    }
+  }
+}

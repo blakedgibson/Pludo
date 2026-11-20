@@ -1,0 +1,104 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Style src="../USS/MobileStyles.uss" />
+
+    <ui:VisualElement name="avatar-root" class="screen-root">
+
+        <!-- Header -->
+        <ui:VisualElement class="screen-header">
+            <ui:VisualElement>
+                <ui:Label class="screen-title" text="Avatar" />
+                <ui:Label class="header-subtitle" text="Customize your look" />
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+        <!-- Live avatar preview — RenderTexture bound via code -->
+        <ui:VisualElement name="avatar-viewport" class="avatar-viewport">
+
+            <!-- Hint shown when nothing is equipped yet -->
+            <ui:Label name="avatar-hint" class="avatar-viewport-hint"
+                      text="Tap Customize to get dressed" />
+
+            <!-- Equipped chips overlay at bottom of the preview -->
+            <ui:VisualElement name="equipped-overlay" class="equipped-overlay">
+                <ui:ScrollView name="equipped-scroll"
+                               horizontal="true" vertical="false"
+                               vertical-scroller-visibility="Hidden"
+                               horizontal-scroller-visibility="Hidden"
+                               mouse-wheel-scroll-size="60">
+                    <ui:VisualElement name="equipped-chips" class="equipped-chips-inner" />
+                </ui:ScrollView>
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+
+        <!-- Action buttons -->
+        <ui:VisualElement class="action-row">
+            <ui:Button name="btn-customize" class="action-btn">
+                <ui:Label class="action-btn-icon" text="&#x270F;" />
+                <ui:Label class="action-btn-label" text="Customize" />
+            </ui:Button>
+            <ui:Button name="btn-marketplace" class="action-btn">
+                <ui:Label class="action-btn-icon marketplace-icon" text="&#x1F6CD;" />
+                <ui:Label class="action-btn-label" text="Marketplace" />
+            </ui:Button>
+        </ui:VisualElement>
+
+        <!-- Wardrobe panel — absolute overlay, slides up from bottom on Customize -->
+        <ui:VisualElement name="wardrobe-panel" class="wardrobe-panel hidden">
+
+            <!-- Drag handle -->
+            <ui:VisualElement name="drag-handle" class="sheet-drag-handle">
+                <ui:VisualElement class="drag-handle-bar" />
+            </ui:VisualElement>
+
+            <!-- Wardrobe header -->
+            <ui:VisualElement class="wardrobe-header">
+                <ui:VisualElement>
+                    <ui:Label class="wardrobe-title" text="Wardrobe" />
+                    <ui:Label name="wardrobe-count" class="header-subtitle" text="" />
+                </ui:VisualElement>
+                <ui:Button name="btn-close-wardrobe" class="header-icon-btn">
+                    <ui:Label class="header-icon-label" text="&#x2715;" />
+                </ui:Button>
+            </ui:VisualElement>
+
+            <!-- Slot filter pills -->
+            <ui:ScrollView name="slots-scroll"
+                           horizontal="true" vertical="false"
+                           vertical-scroller-visibility="Hidden"
+                           horizontal-scroller-visibility="Hidden"
+                           mouse-wheel-scroll-size="60">
+                <ui:VisualElement name="slots-inner" class="slots-scroll-inner" />
+            </ui:ScrollView>
+
+            <!-- Loading skeletons -->
+            <ui:VisualElement name="items-loading" class="items-grid hidden">
+                <ui:VisualElement class="skeleton-item-card"><ui:VisualElement class="skeleton-item-thumb" /></ui:VisualElement>
+                <ui:VisualElement class="skeleton-item-card"><ui:VisualElement class="skeleton-item-thumb" /></ui:VisualElement>
+                <ui:VisualElement class="skeleton-item-card"><ui:VisualElement class="skeleton-item-thumb" /></ui:VisualElement>
+                <ui:VisualElement class="skeleton-item-card"><ui:VisualElement class="skeleton-item-thumb" /></ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- Empty state -->
+            <ui:VisualElement name="items-empty" class="empty-box hidden">
+                <ui:Label class="empty-icon" text="&#x1F4E6;" />
+                <ui:Label class="empty-title" text="No items yet" />
+                <ui:Label class="empty-desc"
+                          text="Create items in the Forge tab or browse the Marketplace!" />
+            </ui:VisualElement>
+
+            <!-- Item grid -->
+            <ui:ScrollView name="items-scroll" class="hidden"
+                           vertical="true" horizontal="false"
+                           vertical-scroller-visibility="Hidden"
+                           horizontal-scroller-visibility="Hidden"
+                           mouse-wheel-scroll-size="120"
+                           style="flex-grow:1;">
+                <ui:VisualElement name="items-grid" class="items-grid" />
+                <ui:VisualElement class="scroll-pad-bottom" />
+            </ui:ScrollView>
+
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>

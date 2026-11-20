@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0ea67e6b7e9f4018a72d4ebe6df0fa7, type: 3}
+  m_Name: PludoEnvironmentConfig
+  m_EditorClassIdentifier:
+  _development: {fileID: 11400000, guid: a1b2c3d4e5f67890abcdef1234567801, type: 2}
+  _staging: {fileID: 0}
+  _production: {fileID: 11400000, guid: b2c3d4e5f67890abcdef1234567890b2, type: 2}
+  _photonAppId: 249446d6-c6d6-4c04-ba84-fc87f3f19496
+  _photonAppVersion: 1.0
+  _r2: {fileID: 11400000, guid: daa3bde6be2544d3cbc7a18ec3d703ea, type: 2}
+  _devApiUrl: http://localhost:4000
+  _prodApiUrl:

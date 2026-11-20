@@ -1,0 +1,54 @@
+{
+  "description": "Fix: play button state and blank preview after 'models still generating' toast",
+  "date": "2026-05-06",
+  "bugs": [
+    {
+      "id": "bug-1",
+      "title": "Play button fires during script_ready with no user warning",
+      "root_cause": "assetsReady was false and the button was no-op (⏳ icon), but user had no way to play even though the game script was ready. No affordance existed for the script_ready window.",
+      "fix": "react/src/screens/CreateScreen.tsx",
+      "changes": [
+        "Added assetsProgress state ({done, total}) updated during build polling's script_ready phase",
+        "Added showPlayModal state to gate the PlayAnywayModal",
+        "Play button now has 3 distinct states: isBuilding → disabled (⏳), !assetsReady && !isBuilding → amber (▶, shows X/Y label), assetsReady → green (▶ Play)",
+        "Added PlayAnywayModal component: shows progress, 'Play Now' (launches immediately) and 'Wait for Full Models' buttons",
+        "setShowPlayModal(false) and setAssetsProgress reset on status=done so modal auto-closes when models finish"
+      ]
+    },
+    {
+      "id": "bug-2",
+      "title": "Preview goes blank when play is rejected by Unity toast",
+      "root_cause": "GameLauncher.PlayFromEditorAsync() called LuauGameRunner.ExitGame() at the very top of the method, before fetching game data or doing any validation. The bad assetUrlsJson guard then fired, showed a toast, and returned — leaving the preview destroyed with nothing replacing it.",
+      "fix": "Assets/Scripts/Game/GameLauncher.cs",
+      "changes": [
+        "Moved LuauGameRunner.ExitGame() to AFTER all validation — only called when the launch is confirmed",
+        "Moved StatusBarManager.Hide() and EnterGameOrientationAsync() to after validation",
+        "Removed ShowLoadingOverlay/HideOverlay (not needed for a fast local API call)",
+        "Removed the bad assetUrlsJson == '{}' guard entirely — a game with no Meshy models legitimately has an empty manifest and should play normally",
+        "Failed validation now just shows a toast; the preview scene is never touched"
+      ]
+    }
+  ],
+  "test_cases": [
+    {
+      "scenario": "New world — AI says ready, user taps play during script_ready",
+      "expected": "Amber play button tapped → PlayAnywayModal appears over intact preview. 'Wait' dismisses modal. 'Play Now' launches game."
+    },
+    {
+      "scenario": "New world — play tapped during isBuilding (pending)",
+      "expected": "Play button is ⏳ color=secondary, tap does nothing. No modal, no change."
+    },
+    {
+      "scenario": "Game with no Meshy assets (assetsUrlsJson = '{}') — status = done",
+      "expected": "Play launches immediately with no toast. Preview transitions to game."
+    },
+    {
+      "scenario": "Meshy models finish while PlayAnywayModal is open",
+      "expected": "Modal auto-closes (setShowPlayModal(false) at done). Play button turns green."
+    },
+    {
+      "scenario": "Play tapped when gameCode is null/empty",
+      "expected": "Toast: 'This game has no script yet.' Preview stays intact."
+    }
+  ]
+}

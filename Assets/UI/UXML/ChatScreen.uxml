@@ -1,0 +1,113 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Style src="../USS/MobileStyles.uss" />
+
+    <ui:VisualElement name="chat-root" class="screen-root">
+
+        <!-- Friends list view -->
+        <ui:VisualElement name="friends-view" style="flex-grow:1; flex-direction:column;">
+
+            <!-- Header -->
+            <ui:VisualElement class="screen-header">
+                <ui:Label class="screen-title" text="Chat" />
+                <ui:Button name="add-friend-btn" class="header-icon-btn">
+                    <ui:Label class="header-icon-label" text="&#x2B;" />
+                </ui:Button>
+            </ui:VisualElement>
+
+            <!-- Empty state -->
+            <ui:VisualElement name="friends-empty" class="empty-box hidden">
+                <ui:Label class="empty-icon" text="&#x1F465;" />
+                <ui:Label class="empty-title" text="No friends yet" />
+                <ui:Label class="empty-desc"
+                          text="Add a friend to start chatting" />
+                <ui:Button name="add-first-btn" class="add-first-btn">
+                    <ui:Label class="add-first-btn-text" text="Add Friend" />
+                </ui:Button>
+            </ui:VisualElement>
+
+            <!-- Friends list -->
+            <ui:ScrollView name="friends-scroll" class="scroll-content hidden"
+                           vertical="true" horizontal="false"
+                           vertical-scroller-visibility="Hidden"
+                           horizontal-scroller-visibility="Hidden"
+                           mouse-wheel-scroll-size="120">
+                <ui:VisualElement name="friends-list" />
+                <ui:VisualElement class="scroll-pad-bottom" />
+            </ui:ScrollView>
+
+        </ui:VisualElement>
+
+        <!-- Chat thread view (hidden by default, shown when friend selected) -->
+        <ui:VisualElement name="thread-view" class="hidden" style="flex-grow:1; flex-direction:column;">
+
+            <!-- Thread header -->
+            <ui:VisualElement class="thread-header">
+                <ui:Button name="thread-back" class="back-btn">
+                    <ui:Label text="&#x2190;" style="font-size:22px; color:rgb(232,234,246); -unity-text-align:middle-center;" />
+                </ui:Button>
+                <ui:VisualElement name="thread-avatar" class="thread-avatar">
+                    <ui:Label name="thread-avatar-init" class="thread-avatar-initials" text="?" />
+                </ui:VisualElement>
+                <ui:VisualElement style="flex-grow:1;">
+                    <ui:Label name="thread-name"   class="thread-name"   text="" />
+                    <ui:Label name="thread-handle" class="thread-handle" text="" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- Messages empty -->
+            <ui:VisualElement name="thread-empty" class="empty-box hidden">
+                <ui:Label name="thread-empty-text" class="empty-desc"
+                          text="Say hi!" />
+            </ui:VisualElement>
+
+            <!-- Messages list -->
+            <ui:ScrollView name="messages-scroll" class="scroll-content hidden"
+                           vertical="true" horizontal="false"
+                           vertical-scroller-visibility="Hidden"
+                           horizontal-scroller-visibility="Hidden"
+                           mouse-wheel-scroll-size="80">
+                <ui:VisualElement name="messages-list" class="messages-container" />
+                <ui:VisualElement style="height:80px;" />
+            </ui:ScrollView>
+
+            <!-- Input row -->
+            <ui:VisualElement class="chat-input-row">
+                <ui:TextField name="chat-input" class="chat-input"
+                              placeholder-text="Message..." />
+                <ui:Button name="chat-send" class="send-btn">
+                    <ui:Label class="send-btn-icon" text="&#x27A4;" />
+                </ui:Button>
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+
+        <!-- Add Friend modal -->
+        <ui:VisualElement name="add-friend-modal" class="hidden">
+            <ui:VisualElement class="modal-backdrop" name="modal-backdrop-dismiss" />
+            <ui:VisualElement class="modal-sheet">
+                <ui:Label class="modal-title" text="Add Friend" />
+                <ui:TextField name="add-search-field" class="modal-input"
+                              placeholder-text="Search by username..." />
+                <ui:VisualElement name="add-search-idle" class="add-search-hint">
+                    <ui:Label class="add-search-hint-text" text="Type to search accounts" />
+                </ui:VisualElement>
+                <ui:VisualElement name="add-search-loading" class="add-search-hint hidden">
+                    <ui:Label class="add-search-hint-text" text="Searching..." />
+                </ui:VisualElement>
+                <ui:VisualElement name="add-search-empty" class="add-search-hint hidden">
+                    <ui:Label class="add-search-hint-text" text="No accounts found" />
+                </ui:VisualElement>
+                <ui:ScrollView name="add-search-results" class="add-results-scroll hidden"
+                               vertical="true" horizontal="false"
+                               vertical-scroller-visibility="Hidden"
+                               horizontal-scroller-visibility="Hidden">
+                    <ui:VisualElement name="add-results-list" />
+                </ui:ScrollView>
+                <ui:Button name="modal-cancel" class="cancel-btn" style="margin-top: 4px;">
+                    <ui:Label class="cancel-btn-text" text="Cancel" />
+                </ui:Button>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>

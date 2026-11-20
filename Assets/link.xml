@@ -1,0 +1,34 @@
+<linker>
+  <!-- Prevent IL2CPP from stripping managed crypto used by PlayerPrefsTokenStorage.
+       AesManaged and SHA256Managed are used by name at runtime via new AesManaged()
+       and new SHA256Managed(). The linker cannot see through the constructor calls
+       and will strip these types on iOS App Store builds without these entries.
+       Removal symptoms: NullReferenceException or MissingMethodException on first
+       sign-in attempt on device builds only (Editor and Android debug builds pass). -->
+  <assembly fullname="mscorlib">
+    <type fullname="System.Security.Cryptography.AesManaged"    preserve="all" />
+    <type fullname="System.Security.Cryptography.SHA256Managed" preserve="all" />
+    <type fullname="System.Security.Cryptography.CryptoStream"  preserve="all" />
+  </assembly>
+
+  <!-- Preserve System.Threading.Channels used by SupabaseRealtimeClient for
+       buffered event queues on subscription channels. -->
+  <assembly fullname="System.Threading.Channels">
+    <type fullname="System.Threading.Channels.Channel"     preserve="all" />
+    <type fullname="System.Threading.Channels.Channel`1"   preserve="all" />
+    <type fullname="System.Threading.Channels.ChannelReader`1" preserve="all" />
+    <type fullname="System.Threading.Channels.ChannelWriter`1" preserve="all" />
+    <type fullname="System.Threading.Channels.BoundedChannelOptions" preserve="all" />
+  </assembly>
+
+  <!-- Preserve WebSocket types used by SupabaseRealtimeClient. Not stripped
+       on Windows/macOS but can be stripped on iOS IL2CPP builds. -->
+  <assembly fullname="System.Net.WebSockets.Client">
+    <type fullname="System.Net.WebSockets.ClientWebSocket"        preserve="all" />
+    <type fullname="System.Net.WebSockets.ClientWebSocketOptions" preserve="all" />
+  </assembly>
+  <assembly fullname="System.Net.WebSockets">
+    <type fullname="System.Net.WebSockets.WebSocket"            preserve="all" />
+    <type fullname="System.Net.WebSockets.WebSocketReceiveResult" preserve="all" />
+  </assembly>
+</linker>

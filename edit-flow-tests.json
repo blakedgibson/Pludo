@@ -1,0 +1,235 @@
+{
+  "runAt": "2026-11-13T09:03:10.099Z",
+  "summary": {
+    "passed": 23,
+    "failed": 0,
+    "skipped": 13
+  },
+  "results": [
+    {
+      "step": "S2",
+      "name": "manifest filter keeps only truly new assets",
+      "status": "PASS"
+    },
+    {
+      "step": "S2",
+      "name": "manifest cap enforces max 3 new assets per edit",
+      "status": "PASS"
+    },
+    {
+      "step": "S2",
+      "name": "merged asset urls include both old and new after edit",
+      "status": "PASS"
+    },
+    {
+      "step": "S2",
+      "name": "Meshy not called for existing asset IDs (R2 cache hit log check)",
+      "status": "SKIP",
+      "note": "Requires live Meshy API + R2 logs"
+    },
+    {
+      "step": "S2",
+      "name": "Claude does not re-request existing model IDs",
+      "status": "SKIP",
+      "note": "Requires live Claude API call"
+    },
+    {
+      "step": "S3",
+      "name": "hot-reload creates new objects without ghost entities",
+      "status": "PASS"
+    },
+    {
+      "step": "S3",
+      "name": "hot-reload same script twice produces identical entity count",
+      "status": "PASS"
+    },
+    {
+      "step": "S3",
+      "name": "hot-reload with syntax error preserves previous valid state",
+      "status": "PASS"
+    },
+    {
+      "step": "S3",
+      "name": "hot-reload preserves player stats (health, score)",
+      "status": "PASS"
+    },
+    {
+      "step": "S3",
+      "name": "OnUpdate is re-registered after hot-reload",
+      "status": "PASS"
+    },
+    {
+      "step": "S3",
+      "name": "rapid 10 hot-reloads do not accumulate ghost entities",
+      "status": "PASS"
+    },
+    {
+      "step": "S4",
+      "name": "slice(-20) keeps last 20 messages",
+      "status": "PASS"
+    },
+    {
+      "step": "S4",
+      "name": "21st message drops oldest, window is messages 2-21",
+      "status": "PASS"
+    },
+    {
+      "step": "S4",
+      "name": "truncation always drops from oldest end",
+      "status": "PASS"
+    },
+    {
+      "step": "S4",
+      "name": "content is capped at 500 chars per message",
+      "status": "PASS"
+    },
+    {
+      "step": "S4",
+      "name": "history is ordered chronologically (oldest first)",
+      "status": "PASS"
+    },
+    {
+      "step": "S4",
+      "name": "Claude lacks context after 25 messages when context from msg 1 is needed",
+      "status": "SKIP",
+      "note": "Known product limitation — context window drops msgs > 20 back. Documented below."
+    },
+    {
+      "step": "S5",
+      "name": "hot_reload_game reloads all rooms for a gameId",
+      "status": "PASS"
+    },
+    {
+      "step": "S5",
+      "name": "hot_reload for unknown gameId reloads 0 rooms",
+      "status": "PASS"
+    },
+    {
+      "step": "S5",
+      "name": "room remains intact (not destroyed) after hot-reload error",
+      "status": "PASS"
+    },
+    {
+      "step": "S5",
+      "name": "two WebSocket clients both receive snapshot after hot-reload",
+      "status": "SKIP",
+      "note": "Requires live WebSocket server wiring"
+    },
+    {
+      "step": "S5",
+      "name": "neither client disconnects during hot-reload",
+      "status": "SKIP",
+      "note": "Requires live WebSocket server wiring"
+    },
+    {
+      "step": "S5",
+      "name": "game state (score/health) preserved or reset consistently across reload",
+      "status": "SKIP",
+      "note": "Documented behavior: player stats (health, score, speed) are preserved; entities reset"
+    },
+    {
+      "step": "S6",
+      "name": "partial script with no OnUpdate does not crash the runtime",
+      "status": "PASS"
+    },
+    {
+      "step": "S6",
+      "name": "sanitizer strips Luau type annotations before execution",
+      "status": "PASS"
+    },
+    {
+      "step": "S6",
+      "name": "stream of 5 partial scripts each hot-reloads without crashing",
+      "status": "SKIP",
+      "note": "Requires live streaming endpoint wiring"
+    },
+    {
+      "step": "S6",
+      "name": "unclosed function block in partial is handled gracefully (deferred or skipped)",
+      "status": "SKIP",
+      "note": "Lua syntax error at doString time — handled by hot_reload error path (tested in S3)"
+    },
+    {
+      "step": "S6",
+      "name": "final script correctly replaces all partial state with no leftover objects",
+      "status": "SKIP",
+      "note": "Covered by S3 ghost-object test"
+    },
+    {
+      "step": "S7",
+      "name": "empty userMessage returns 400 without touching Claude",
+      "status": "PASS"
+    },
+    {
+      "step": "S7",
+      "name": "whitespace-only userMessage returns 400",
+      "status": "PASS"
+    },
+    {
+      "step": "S7",
+      "name": "userMessage capped at 1000 chars before Claude call",
+      "status": "PASS"
+    },
+    {
+      "step": "S7",
+      "name": "asset cap enforced — 7th asset for a 6-asset game is filtered",
+      "status": "PASS"
+    },
+    {
+      "step": "S7",
+      "name": "genre-shift edit (platformer → racer) handled gracefully or rejected",
+      "status": "SKIP",
+      "note": "Requires live Claude API call"
+    },
+    {
+      "step": "S7",
+      "name": "edit references non-existent asset — Claude ignores or surfaces error",
+      "status": "SKIP",
+      "note": "Requires live Claude API call"
+    },
+    {
+      "step": "S7",
+      "name": "non-English edit prompt — document behavior",
+      "status": "SKIP",
+      "note": "Requires live Claude API call"
+    },
+    {
+      "step": "S7",
+      "name": "rapid-fire 10 concurrent edits processed in order",
+      "status": "SKIP",
+      "note": "Requires load testing against live server"
+    }
+  ],
+  "knownLimitations": [
+    {
+      "area": "Chat history context window",
+      "limitation": "The /api/edit-game endpoint trims history to the last 20 messages (each capped at 500 chars). If a user references something from before message N-20, Claude will not have that context. This is a product-level limitation: \"revert the change you made earlier\" fails silently if the referenced edit is outside the window.",
+      "impact": "Users making many edits in a single session may find Claude unable to reference early edits.",
+      "recommendation": "Consider persisting a rolling summary message rather than raw history, or raising the window for paid tiers."
+    },
+    {
+      "area": "Asset cap post-edit",
+      "limitation": "The 6-asset cap from the initial generation prompt is not enforced server-side during edits. An edit can add up to 3 new assets on top of an existing 6, resulting in 9 total assets in the manifest.",
+      "impact": "Games can accumulate more than 6 Meshy models over multiple edits, increasing load times.",
+      "recommendation": "Add a server-side check: if existingIds.length + pendingItems.length > 6, trim pendingItems to fit."
+    },
+    {
+      "area": "Server-side hot-reload entity state on reload",
+      "limitation": "Player health and score are preserved across hot-reloads; entity world is fully reset. This means in-progress game state (enemy positions, collected items, score multipliers stored in Lua locals) is lost on every edit.",
+      "impact": "Players in active sessions see a full scene reset when the game creator makes an edit.",
+      "recommendation": "Documented and expected behavior. Consider adding a client-side \"game updated\" banner."
+    }
+  ],
+  "fixesApplied": [
+    {
+      "file": "api-server/src/lua-runtime.ts",
+      "description": "hot_reload: removed savedEntities restoration — OnStart now rebuilds entities from scratch, eliminating ghost objects.",
+      "bug": "Old entity map was preserved and then _callbacks.start() added new entities on top, leaving uncontrolled ghosts."
+    },
+    {
+      "file": "api-server/src/lua-runtime.ts",
+      "description": "hot_reload: new engine created before old engine closed. On script error, new engine is discarded and previous state is fully restored (lua, world, pending queues).",
+      "bug": "Lua engine was closed before validating new script. A syntax error left the game with no engine and no entities."
+    }
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "date": "2026-05-06",
+  "investigation_summary": {
+    "original_hypothesis": "Only 1 GLB saved to R2 across 3+ games — pipeline severely broken",
+    "actual_finding": "Pipeline is healthy. 159 GLBs in R2. Multiple games have 5-6 assets each.",
+    "evidence": {
+      "r2_bucket": "pludo-assets-dev",
+      "total_glbs": 159,
+      "per_game_clusters": [
+        { "hour": "2026-05-06T21", "count": 6, "notes": "game #85 Arctic Frost Run — all refined ~4MB" },
+        { "hour": "2026-05-06T19", "count": 6, "notes": "game #84 Plants vs Zombies Blitz" },
+        { "hour": "2026-05-06T18", "count": 10, "notes": "games #82+#83 PvZ Yard" },
+        { "hour": "2026-05-06T04", "count": 15, "notes": "games #80+#81" },
+        { "hour": "2026-05-05T22", "count": 16, "notes": "multiple games" }
+      ]
+    }
+  },
+  "supabase_audit": {
+    "recent_games": [
+      { "id": 85, "title": "Arctic Frost Run",        "assets": 6, "credits_used": 90, "status": "DONE" },
+      { "id": 84, "title": "Plants vs Zombies Blitz", "assets": 6, "credits_used": 80, "status": "DONE" },
+      { "id": 83, "title": "Plants vs Zombies Yard",  "assets": 6, "credits_used": 80, "status": "DONE" },
+      { "id": 82, "title": "Plants Vs Zombies Yard",  "assets": 4, "credits_used": 55, "status": "PARTIAL" },
+      { "id": 81, "title": "Arctic Ice Slider",       "assets": 6, "credits_used": 90, "status": "DONE" },
+      { "id": 80, "title": "Blizzard Harvest Rush",   "assets": 3, "credits_used": 55, "status": "PARTIAL" },
+      { "id": 87, "title": "Plants vs Zombies Defense","assets": 0, "credits_used": 0,  "status": "IN_FLIGHT" },
+      { "id": 86, "title": "Coffee Obstacle Course",  "assets": 0, "credits_used": 0,  "status": "IN_FLIGHT" }
+    ],
+    "older_empties": {
+      "ids": [76, 77, 78, 79],
+      "explanation": "No credit_before/after data — generated before credit tracking was added, or while MESHY_DEV_MODE=true"
+    }
+  },
+  "root_cause_of_placeholder_cubes": {
+    "actual_cause": "Play button was firing during script_ready phase (Lua done, Meshy still running). assetUrlsJson = '{}' at that point. Unity loaded game with empty manifest → all Object.Create('model:*') fell back to colored placeholder cubes.",
+    "fix_applied": "react/src/screens/CreateScreen.tsx — play button state machine with assetsReady gate and PlayAnywayModal. Also fixed GameLauncher.cs to not destroy preview on failed play.",
+    "files_changed": [
+      "react/src/screens/CreateScreen.tsx",
+      "Assets/Scripts/Game/GameLauncher.cs"
+    ]
+  },
+  "partial_game_analysis": {
+    "games_80_82": {
+      "observation": "3-4 assets instead of 6",
+      "likely_cause": "Individual Meshy tasks failed (FAILED status from waitForTask) — pipeline caught these in resolveManifest try/catch and returned empty URL for those assets",
+      "impact": "Affected assets showed placeholder cubes, others showed real 3D models",
+      "fix": "Added retry to meshyFetch for 429 and 5xx errors — reduces failure rate for transient Meshy API issues"
+    }
+  },
+  "improvements_made": [
+    {
+      "file": "api-server/src/meshy.ts",
+      "change": "meshyFetch now retries up to 3 times with exponential backoff (5s, 10s, 20s) on HTTP 429 and 5xx errors. Network failures also retry. Hard errors (4xx except 429) throw immediately.",
+      "benefit": "Reduces partial-game failures caused by transient Meshy rate limits or server hiccups"
+    },
+    {
+      "file": "api-server/src/index.ts",
+      "change": "Added per-stage logging in resolveAsset: START with cacheKey/semaphore state, preview task ID, preview completion, refine task ID, refine completion, GLB download size, R2 upload result. Errors upgraded from console.warn to console.error at critical failure points.",
+      "benefit": "Full visibility into exactly which stage each asset fails at — enables rapid diagnosis of future pipeline issues"
+    }
+  ],
+  "pipeline_health_verified": {
+    "semaphore": "Releases correctly in finally block — no deadlock",
+    "in_flight_dedup": "Registered before IIFE yields, deleted in finally — no race condition",
+    "r2_upload": "Working correctly — 159 GLBs prove it. Errors are now logged at ERROR level.",
+    "glb_download": "Working — refine fallback to preview mesh is correct behavior when refine fails",
+    "asset_url_reception": "Unity receives paths like /api/glb/game-assets/v1/{hash}.glb — verified working in Supabase records"
+  },
+  "before_after": {
+    "before": "Placeholder cubes on every play due to play-during-script_ready bug",
+    "after": "Real 3D models load when game is done; amber play button + modal during script_ready lets user choose to wait or play with placeholders",
+    "r2_before": "Already had 159 GLBs — was never broken",
+    "r2_after": "Same, plus retry resilience and full diagnostic logging"
+  },
+  "needs_manual_review": [
+    {
+      "item": "Games 86 and 87 (in-flight as of investigation)",
+      "action": "Verify they complete with 6 assets each. If still empty after 20 min, check server logs for Meshy errors on those specific game IDs."
+    },
+    {
+      "item": "MESHY_SKIP_REFINE=false",
+      "action": "With refine enabled, each game costs 90 credits (6 × 15). At 10+ games/day this is 900+ credits/day. Consider whether MESHY_SKIP_REFINE=true (5 credits/asset, 30/game) is acceptable for dev testing."
+    }
+  ]
+}

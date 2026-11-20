@@ -1,0 +1,34 @@
+{
+  "name": "pludo-api-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node --import tsx/esm src/index.ts",
+    "dev": "node --import tsx/esm --watch src/index.ts",
+    "test": "node --import tsx/esm src/moderation/moderation.test.ts && node --import tsx/esm src/edit-flow.test.ts && node --import tsx/esm src/edge-case-prompt.test.ts",
+    "test:edit": "node --import tsx/esm src/edit-flow.test.ts",
+    "test:prompts": "node --import tsx/esm src/edge-case-prompt.test.ts",
+    "test:live": "node --import tsx/esm src/live-prompt.test.ts",
+    "thumbs:backfill": "node --import tsx/esm scripts/backfill-thumbnails.ts",
+    "test:moderation": "node --import tsx/esm src/moderation/moderation.test.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.54.0",
+    "@aws-sdk/client-s3": "^3.750.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.4.2",
+    "express": "^5.1.0",
+    "puppeteer": "^25.0.4",
+    "wasmoon": "^1.16.0",
+    "ws": "^8.18.2"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.1",
+    "@types/node": "^24.0.0",
+    "@types/ws": "^8.5.14",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

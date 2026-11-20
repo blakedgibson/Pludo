@@ -1,0 +1,24 @@
+All assets in this directory are CC0 (public domain) from Poly Haven (https://polyhaven.com).
+
+HDRI Skyboxes (2K equirectangular)
+───────────────────────────────────
+sky_midday.hdr         — "Alps Field" by Jarod Guest
+sky_golden_hour.hdr    — "Belfast Sunset Puresky" by Jarod Guest
+sky_overcast.hdr       — "Belfast Open Field" by Jarod Guest
+sky_night.hdr          — "Blaubeuren Night" by Andreas Mischok
+sky_stormy.hdr         — "Approaching Storm" by Jarod Guest
+sky_clear_blue.hdr     — "Autumn Field Puresky" by Jarod Guest
+sky_warm_day.hdr       — "Bell Park Dawn" by Jarod Guest
+
+Ground Textures (2K albedo JPGs)
+──────────────────────────────────
+grass_ground_diff.jpg  — "Grass Ground" by Rob Tuytel
+dirt_ground_diff.jpg   — "Dirt Ground" by Rob Tuytel
+sand_ground_diff.jpg   — "Sand Ground" by Rob Tuytel
+stone_tiles_diff.jpg   — "Stone Tiles" by Rob Tuytel
+snow_ground_diff.jpg   — "Snow Ground" by Rob Tuytel
+wood_planks_diff.jpg   — "Wood Planks" by Rob Tuytel
+asphalt_diff.jpg       — "Asphalt" by Rob Tuytel
+
+License: CC0 — No attribution required, but noted here for reference.
+Source:  https://polyhaven.com

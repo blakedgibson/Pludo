@@ -1,0 +1,148 @@
+{
+  "$schema_note": "Output of the spawn-point thumbnail refactor. Sections marked NEEDS_MANUAL_REVIEW require running Unity end-to-end and cannot be filled in offline. Run scripts/verify-thumbnail-spawn-fix.js after generating test games to populate the runtime sections.",
+  "generated_at_offline": "2026-05-06",
+  "status": {
+    "step_1_identify_spawn":             "complete",
+    "step_2_record_camera_state":        "complete",
+    "step_3_capture_at_spawn":           "complete",
+    "step_4_blank_detection":            "complete",
+    "step_5_two_phase_capture":          "complete",
+    "step_6_server_isFinal_flag":        "complete",
+    "step_7_system_prompt_spawn_rule":   "complete",
+    "step_8_template_verification":      "NEEDS_MANUAL_REVIEW",
+    "step_9_runtime_outputs":            "NEEDS_MANUAL_REVIEW"
+  },
+  "code_changes": {
+    "Assets/Scripts/LuauGameRunner.cs": {
+      "spawn_camera_state_struct":  "lines ~46-54 (struct + _spawnCameraState field)",
+      "capture_trigger":            "line ~545 (StartCoroutine(SpawnPointThumbnailFlow(_activeGameId)))",
+      "spawn_pose_recording":       "RecordSpawnCameraState() — fires one frame after OnStart via SpawnPointThumbnailFlow",
+      "two_phase_flow":             "SpawnPointThumbnailFlow(): placeholder at +3s, final at +8s + IsLoadingComplete wait (cap 10s)",
+      "capture_and_upload":         "CaptureAndUpload(): locks Camera.main pose, renders 512×288, blank-detects, retries once on blank, restores camera, encodes JPEG 80, uploads with isFinal flag",
+      "blank_detection":            "IsBlankImage(): 20-pixel sample, 90% match within 0.05 RGB tolerance",
+      "spawn_state_reset":          "TearDown() now sets _spawnCameraState = default; so a stale pose can't leak into the next session",
+      "audio_silenced_on_teardown": "TearDown() also calls GameAudio.StopAll() (separate fix, kept)"
+    },
+    "Assets/Scripts/Services/GameAssetLoader.cs": {
+      "loading_complete_flag": "Public IsLoadingComplete bool — false at LoadAssets entry, true at the end of the URL loop. Read by SpawnPointThumbnailFlow to defer the final capture until Meshy assets are in (capped at 10 s)."
+    },
+    "api-server/src/index.ts": {
+      "thumbnail_endpoint":      "POST /api/game/:id/thumbnail now accepts {imageBase64, isFinal}. Placeholder uploads to game-thumbnails/{id}_placeholder.jpg; final uploads to game-thumbnails/{id}.jpg. DB write rules: final always overwrites; placeholder only writes when current thumbnail_url is empty.",
+      "absolute_url_fix":        "URL is built from req.protocol + req.get('host') so dev fallbacks resolve from Unity (previously a relative '/api/glb/...' path that Unity could not resolve).",
+      "rls_jwt_forwarding":      "Authorization Bearer <jwt> from the Unity request is passed to sbPatch as the third arg, satisfying the forge_games UPDATE policy (created_by_user_id = auth.uid()).",
+      "luau_forge_system_addition": "Appended SPAWN POINT RULE block right after OBJECT PLACEMENT HEIGHT in LUAU_FORGE_SYSTEM. Per-genre framing for platformer/survival/RPG/tycoon/puzzle/racer/strategy."
+    }
+  },
+  "capture_output_format": {
+    "width_px":  512,
+    "height_px": 288,
+    "aspect_ratio": "16:9",
+    "encoding": "JPEG quality 80",
+    "color_format": "RGB24"
+  },
+  "blank_detection_algorithm": {
+    "description": "Sample evenly-spaced pixels across the image. Each sample is compared to the first sample using L1 RGB distance. If ≥ 90% of samples are within 0.05 of the first sample (ie. essentially the same color), the image is considered blank.",
+    "sample_count": 20,
+    "color_distance_threshold": 0.05,
+    "match_ratio_threshold": 0.9,
+    "retry_policy": "On blank, wait 3 s and retry once. Second blank is logged and abandoned (no upload). The placeholder retry does not block the final capture.",
+    "expected_to_catch": [
+      "captures while RT not yet bound (solid black)",
+      "captures pointed at the skybox edge (solid sky color)",
+      "captures before any objects spawn (single ambient color)",
+      "captures with disabled camera (clear-color flash)"
+    ],
+    "expected_to_pass_through": [
+      "any scene with terrain visible (variation in ≥ 2 sample columns)",
+      "any scene with > 1 distinct mesh in frame",
+      "any scene with shadows or directional lighting"
+    ]
+  },
+  "spawn_camera_state_log_format": {
+    "log_line": "[LuauGameRunner] Spawn camera state recorded: pos=(x,y,z) rot=(rx,ry,rz) fov=N spawn=(sx,sy,sz) game=ID preview=true|false",
+    "where_to_read": "Unity console / Player.log — captured by the editor when each forge game is opened",
+    "description": "Inspect this line for each test game to see exactly what view was captured. spawn=… is the avatar spawn position; pos/rot/fov is the camera at OnStart+1 frame, which is the pose the thumbnail uses."
+  },
+  "test_templates": {
+    "_note": "Fill these in by running scripts/verify-thumbnail-spawn-fix.js after generating fresh games for each template. Each entry should describe the spawn state recorded (from Unity log) and the placeholder/final thumbnail URLs and byte sizes (from Supabase + curl).",
+    "platformer": {
+      "expected_view": "ground level facing the first set of platforms; path ahead visible",
+      "game_id":            "NEEDS_MANUAL_REVIEW",
+      "spawn_camera_state": "NEEDS_MANUAL_REVIEW",
+      "thumbnail_url":      "NEEDS_MANUAL_REVIEW",
+      "placeholder_size":   "NEEDS_MANUAL_REVIEW",
+      "final_size":         "NEEDS_MANUAL_REVIEW",
+      "visual_assertion":   "NEEDS_MANUAL_REVIEW"
+    },
+    "survival": {
+      "expected_view": "arena center, enemies visible from all sides",
+      "game_id":            "NEEDS_MANUAL_REVIEW",
+      "spawn_camera_state": "NEEDS_MANUAL_REVIEW",
+      "thumbnail_url":      "NEEDS_MANUAL_REVIEW",
+      "placeholder_size":   "NEEDS_MANUAL_REVIEW",
+      "final_size":         "NEEDS_MANUAL_REVIEW",
+      "visual_assertion":   "NEEDS_MANUAL_REVIEW"
+    },
+    "adventure": {
+      "expected_view": "world entrance facing inward; terrain, trees, structures visible",
+      "game_id":            "NEEDS_MANUAL_REVIEW",
+      "spawn_camera_state": "NEEDS_MANUAL_REVIEW",
+      "thumbnail_url":      "NEEDS_MANUAL_REVIEW",
+      "placeholder_size":   "NEEDS_MANUAL_REVIEW",
+      "final_size":         "NEEDS_MANUAL_REVIEW",
+      "visual_assertion":   "NEEDS_MANUAL_REVIEW"
+    },
+    "tycoon": {
+      "expected_view": "main building or shop in foreground",
+      "game_id":            "NEEDS_MANUAL_REVIEW",
+      "spawn_camera_state": "NEEDS_MANUAL_REVIEW",
+      "thumbnail_url":      "NEEDS_MANUAL_REVIEW",
+      "placeholder_size":   "NEEDS_MANUAL_REVIEW",
+      "final_size":         "NEEDS_MANUAL_REVIEW",
+      "visual_assertion":   "NEEDS_MANUAL_REVIEW"
+    },
+    "puzzle": {
+      "expected_view": "first puzzle element in frame",
+      "game_id":            "NEEDS_MANUAL_REVIEW",
+      "spawn_camera_state": "NEEDS_MANUAL_REVIEW",
+      "thumbnail_url":      "NEEDS_MANUAL_REVIEW",
+      "placeholder_size":   "NEEDS_MANUAL_REVIEW",
+      "final_size":         "NEEDS_MANUAL_REVIEW",
+      "visual_assertion":   "NEEDS_MANUAL_REVIEW"
+    },
+    "racer": {
+      "expected_view": "start line facing down the track",
+      "game_id":            "NEEDS_MANUAL_REVIEW",
+      "spawn_camera_state": "NEEDS_MANUAL_REVIEW",
+      "thumbnail_url":      "NEEDS_MANUAL_REVIEW",
+      "placeholder_size":   "NEEDS_MANUAL_REVIEW",
+      "final_size":         "NEEDS_MANUAL_REVIEW",
+      "visual_assertion":   "NEEDS_MANUAL_REVIEW"
+    },
+    "strategy": {
+      "expected_view": "central command structure facing the battlefield",
+      "game_id":            "NEEDS_MANUAL_REVIEW",
+      "spawn_camera_state": "NEEDS_MANUAL_REVIEW",
+      "thumbnail_url":      "NEEDS_MANUAL_REVIEW",
+      "placeholder_size":   "NEEDS_MANUAL_REVIEW",
+      "final_size":         "NEEDS_MANUAL_REVIEW",
+      "visual_assertion":   "NEEDS_MANUAL_REVIEW"
+    }
+  },
+  "manual_review_checklist": [
+    "[ ] Forge a platformer game from a fresh prompt; open in editor; wait 10 s; exit. Confirm placeholder visible in My Games at ~3 s, replaced by final at ~8-10 s.",
+    "[ ] Repeat for survival / adventure / tycoon / puzzle / racer / strategy.",
+    "[ ] For each, copy the [LuauGameRunner] Spawn camera state recorded… line into the test_templates section of this JSON.",
+    "[ ] For each, query Supabase: select id,title,thumbnail_url from forge_games where id = N. Confirm thumbnail_url is non-empty after final capture.",
+    "[ ] curl the final URL and confirm Content-Type: image/jpeg, dimensions 512x288.",
+    "[ ] Open each thumbnail in an image viewer and confirm the spawn point view matches the expected_view for that genre.",
+    "[ ] Confirm IsBlankImage retry message ([LuauGameRunner] Thumbnail capture blank) appears in the Unity console only when actually blank — manually rotate the editor camera off-scene during forge and re-run to verify the warning fires.",
+    "[ ] Confirm camera returns to its prior orbit position after capture (not stuck at the spawn pose)."
+  ],
+  "known_limits": {
+    "placeholder_in_dev": "When R2 is configured but R2_DEV_PUBLIC_URL is empty (current .env state), thumbnails are uploaded to R2 but served back through this api-server's /api/glb/* fallback. URLs are absolute (http://localhost:4000/...) so they resolve from Unity, but won't work if you change ports or hostnames between runs. Set R2_DEV_PUBLIC_URL to a real CDN URL to make URLs portable.",
+    "play_path_capture": "RunGame (server-authoritative play, not editor preview) does not normally fire LuauGameRunner.RunScript on the client — capture only runs when the local Lua runner executes the game. The forge → editor → preview flow is the one that captures. Existing games never captured in the editor will stay blank in My Games until you open them once.",
+    "asset_loading_in_this_codebase": "GameAssetLoader.LoadAssets pre-loads everything before RunScript starts, so IsLoadingComplete is typically true by the time the +8 s final-capture check runs. The flag is still useful when assets are still resolving from R2 cold-start; otherwise the cap kicks in after 10 s of waiting."
+  },
+  "verification_helper": "scripts/verify-thumbnail-spawn-fix.js — run with `node scripts/verify-thumbnail-spawn-fix.js` after forging the 7 test games. It reads the most recent forge_games rows from Supabase, downloads each thumbnail_url, records dimensions and byte sizes, and writes the runtime sections back into this JSON."
+}

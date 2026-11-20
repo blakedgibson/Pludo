@@ -1,0 +1,125 @@
+{
+  "summary": "Editor preview no longer renders 'Preview error: <eof> expected' banners or blinks black during Claude script generation. Partial Lua scripts are now syntactically validated before they reach MoonSharp; truncated chunks are auto-completed when possible and silently dropped when not, leaving the previously rendered scene intact.",
+  "rootCause": {
+    "file": "Assets/Scripts/Game/GameLauncher.cs",
+    "function": "RunPartialScript",
+    "preFixLines": "186-201",
+    "explanation": "RunPartialScript handed every streamed chunk straight to LuauGameRunner.RunGamePreview, which calls TearDown() before parsing. When a chunk arrived truncated mid-block (function/if/for), MoonSharp threw 'end' expected near '<eof>' AFTER the previous scene had already been destroyed. The catch in LuauGameRunner.RunScript (Assets/Scripts/LuauGameRunner.cs:565-579 pre-fix) then wrote 'Preview error: ...' to the _editorError React global, causing both the red banner and the black scene the user reported."
+  },
+  "fix": {
+    "csharp": [
+      {
+        "file": "Assets/Scripts/LuauGameRunner.cs",
+        "additions": [
+          "public static bool IsStreamingPartialScript — gates parse-error notifications and TearDown side-effects",
+          "LuaBlockBalance / IsLuaScriptComplete — count opener vs closer keywords AFTER stripping strings + comments",
+          "AutoCompleteLuaScript — appends N missing 'end' statements when balance > 0",
+          "TryParseLua — dry-run MoonSharp LoadString to confirm grammar before RunScript ever touches the scene",
+          "StripLuaStringsAndComments — handles short strings, long strings ([[...]] and [=[...]=]), line comments, block comments"
+        ],
+        "modifications": [
+          "RunScript catches (ScriptRuntimeException + Exception) now suppress _editorError when IsStreamingPartialScript is true; same for the unfilled-placeholder and 30s-timeout branches"
+        ]
+      },
+      {
+        "file": "Assets/Scripts/Game/GameLauncher.cs",
+        "modifications": [
+          "RunPartialScript now sanitizes the chunk, runs IsLuaScriptComplete, attempts AutoCompleteLuaScript + TryParseLua, and drops the partial entirely (no TearDown) if both checks fail",
+          "StartBuildPreview sets IsStreamingPartialScript = true and calls ClearEditorError() to clear any stale banner",
+          "LaunchAsync editMode branch + RunGame play path + ExitAsync clear IsStreamingPartialScript so genuine post-build errors still surface",
+          "Added private ClearEditorError() helper that wipes _editorError on every ReactRendererUGUI"
+        ]
+      }
+    ],
+    "react": [
+      {
+        "file": "react/src/screens/CreateScreen.tsx",
+        "modifications": [
+          "_editorError poller now skips parse-style errors (regex on 'Preview error|Script error|<eof>|end expected|...') while isBuilding is true, and wipes the global so it can't latch in afterward",
+          "Added a useEffect that clears previewError + Globals._editorError on the rising edge of isBuilding",
+          "Banner JSX guarded with !isBuilding for defense-in-depth"
+        ]
+      }
+    ]
+  },
+  "validation": {
+    "method": "Ran LuauGameRunner.LuaBlockBalance / IsLuaScriptComplete / AutoCompleteLuaScript / TryParseLua against 7 hand-crafted partials via Unity's script-execute MCP after AssetDatabase refresh.",
+    "results": [
+      {
+        "case": "function truncated mid-body",
+        "input": "Scene.SetSkybox(\"day\")\\nlocal function spawnEnemy(x, z)\\n  local e = Object.Create(\"cube\")\\n  e:SetPosition(x, 1, z)",
+        "balance": 1,
+        "rawParses": false,
+        "autoCompleted": "Scene.SetSkybox(\"day\")\\nlocal function spawnEnemy(x, z)\\n  local e = Object.Create(\"cube\")\\n  e:SetPosition(x, 1, z)\\nend\\n",
+        "autoCompletedParses": true,
+        "behavior": "RECOVERED — partial executes, scene materializes incrementally"
+      },
+      {
+        "case": "nested function+if with mid-call truncation (unclosed paren)",
+        "input": "Game.OnStart(function()\\n  if Player.GetHealth() < 30 then\\n    UI.Show(\"Low HP\")",
+        "balance": 2,
+        "rawParses": false,
+        "autoCompletedParses": false,
+        "behavior": "DROPPED — can't repair an unclosed paren by appending end; previous scene survives, no banner, no black blink"
+      },
+      {
+        "case": "for-loop truncated mid-body",
+        "input": "for i = 1, 10 do\\n  local b = Object.Create(\"cube\")\\n  b:SetPosition(i, 0, 0)",
+        "balance": 1,
+        "autoCompletedParses": true,
+        "behavior": "RECOVERED"
+      },
+      {
+        "case": "opener keywords inside a short string",
+        "input": "print(\"function for if while end\")\\nlocal x = 1",
+        "balance": 0,
+        "rawParses": true,
+        "behavior": "PASS-THROUGH — string contents correctly ignored by counter"
+      },
+      {
+        "case": "opener keywords inside a long-string [[...]]",
+        "input": "local s = [[\\nfunction foo() if x then\\n]]\\nprint(s)",
+        "balance": 0,
+        "rawParses": true,
+        "behavior": "PASS-THROUGH — long-string body correctly stripped"
+      },
+      {
+        "case": "complete script",
+        "input": "Scene.SetSkybox(\"night\")\\nGame.OnStart(function()\\n  print(\"ready\")\\nend)",
+        "balance": 0,
+        "rawParses": true,
+        "behavior": "PASS-THROUGH"
+      },
+      {
+        "case": "opener keyword in a line comment",
+        "input": "-- function for if while\\nprint(\"ok\")",
+        "balance": 0,
+        "rawParses": true,
+        "behavior": "PASS-THROUGH — comment correctly stripped"
+      }
+    ]
+  },
+  "errorBannerSuppressionScope": "Suppression is gated on LuauGameRunner.IsStreamingPartialScript (C#) and isBuilding (React). Both flip off the moment LaunchAsync(editMode:true) calls runner.RunGamePreview with the full validated script — at which point genuine parse/runtime errors in a published script surface to the banner exactly as before. ExitAsync also clears the C# flag as a safety net. So error suppression applies only during streaming.",
+  "templateGameRegressionTests": {
+    "status": "NEEDS_MANUAL_REVIEW",
+    "reason": "End-to-end verification of all 7 template games requires kicking off live Claude generation jobs through the actual Pludo API + Anthropic key. Static validator cases above prove the parsing logic; a follow-up live run with each template should confirm zero red banners + zero black blinks across the full streaming window.",
+    "manualSteps": [
+      "Open the Create tab, generate each of the 7 templates (Platformer, Racer, Shooter, Puzzle, Sandbox, RPG, Tower Defense)",
+      "Watch Unity console for [GameLauncher] Auto-completed truncated partial script. and [GameLauncher] Partial unrecoverable — keeping prior scene. log lines",
+      "Confirm no red 'Preview error' banner appears at any point before status flips to script_ready",
+      "Confirm scene never goes solid black between partials",
+      "After done state, deliberately edit the published script to be invalid via the chat (e.g. ask AI to break it) and confirm the banner DOES appear — proving suppression is streaming-scoped only"
+    ]
+  },
+  "knownLimitations": [
+    "Standalone do ... end blocks aren't tracked as openers (rare in AI-generated code; falls through dry-run check)",
+    "repeat ... until depth is counted but auto-complete only appends 'end', so a truncated repeat block still fails the dry-run and is dropped (correct — silently skipped)",
+    "Auto-complete only repairs missing 'end's; truncated expressions (unclosed parens, dangling operators) are dropped to keep the prior scene"
+  ],
+  "filesModified": [
+    "Assets/Scripts/LuauGameRunner.cs",
+    "Assets/Scripts/Game/GameLauncher.cs",
+    "react/src/screens/CreateScreen.tsx",
+    "Assets/Resources/react/index.js (rebuilt bundle)"
+  ]
+}

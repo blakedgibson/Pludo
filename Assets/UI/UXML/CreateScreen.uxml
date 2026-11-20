@@ -1,0 +1,45 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Style src="../USS/MobileStyles.uss" />
+
+    <ui:VisualElement name="create-root" class="screen-root">
+        <ui:VisualElement class="create-inner">
+
+            <ui:Label class="create-heading" text="Create" />
+            <ui:Label class="create-sub"
+                      text="Describe your game, AI builds it." />
+
+            <!-- Result banner (hidden by default) -->
+            <ui:VisualElement name="result-banner" class="result-banner success hidden">
+                <ui:Label name="result-icon" class="result-icon" text="&#x2714;" />
+                <ui:Label name="result-text" class="result-text" text="" />
+            </ui:VisualElement>
+
+            <!-- Spacer pushes input toward center -->
+            <ui:VisualElement class="flex-spacer" />
+
+            <!-- Prompt input card with green send button inside -->
+            <ui:VisualElement name="input-wrap" class="input-wrap">
+                <ui:TextField name="prompt-input" class="prompt-input"
+                              multiline="true"
+                              placeholder-text="Describe your game..." />
+                <ui:Button name="submit-btn" class="submit-btn">
+                    <ui:Label name="submit-icon" class="submit-btn-icon" text="&#x27A4;" />
+                </ui:Button>
+            </ui:VisualElement>
+
+            <!-- "Try asking for..." example chips -->
+            <ui:VisualElement class="try-section">
+                <ui:Label class="try-section-label" text="Try asking for..." />
+                <ui:VisualElement class="try-chips-row">
+                    <ui:Button name="try-chip-1" class="try-chip"
+                               text="A platformer with double jump and wall runs" />
+                    <ui:Button name="try-chip-2" class="try-chip"
+                               text="A top-down puzzle game with portals" />
+                    <ui:Button name="try-chip-3" class="try-chip"
+                               text="A racing game at sunset with drift mechanics" />
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+        </ui:VisualElement>
+    </ui:VisualElement>
+</ui:UXML>

@@ -1,0 +1,73 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Style src="../USS/MobileStyles.uss" />
+
+    <ui:VisualElement name="forge-root" class="screen-root">
+
+        <ui:ScrollView vertical="true" horizontal="false"
+                       vertical-scroller-visibility="Hidden"
+                       horizontal-scroller-visibility="Hidden"
+                       mouse-wheel-scroll-size="120"
+                       style="flex-grow:1;">
+            <ui:VisualElement style="padding-left:20px; padding-right:20px; padding-top:52px; padding-bottom:20px;">
+
+                <ui:Label class="forge-title"    text="Forge" />
+                <ui:Label class="forge-subtitle" text="Describe what you want to create" />
+
+                <!-- Mode toggle: Game / Avatar Item -->
+                <ui:VisualElement class="mode-toggle-row">
+                    <ui:Button name="mode-game" class="mode-tab mode-active">
+                        <ui:Label class="mode-tab-icon"  text="&#x1F3AE;" />
+                        <ui:Label class="mode-tab-label" text="Game" />
+                    </ui:Button>
+                    <ui:Button name="mode-item" class="mode-tab">
+                        <ui:Label class="mode-tab-icon"  text="&#x1F4E6;" />
+                        <ui:Label class="mode-tab-label" text="Avatar Item" />
+                    </ui:Button>
+                </ui:VisualElement>
+
+                <!-- Creator name -->
+                <ui:VisualElement class="form-field">
+                    <ui:Label class="field-label" text="Your name" />
+                    <ui:TextField name="creator-field" class="text-input-field"
+                                  value="Player1"
+                                  placeholder-text="Player1" />
+                </ui:VisualElement>
+
+                <!-- Prompt -->
+                <ui:VisualElement class="form-field">
+                    <ui:Label name="prompt-label" class="field-label"
+                              text="Describe your game" />
+                    <ui:TextField name="prompt-field" class="prompt-textarea"
+                                  multiline="true"
+                                  placeholder-text="e.g. A neon cyberpunk runner..." />
+                    <ui:Label name="char-count" class="char-count" text="0/500" />
+                </ui:VisualElement>
+
+                <!-- Example chips -->
+                <ui:Label class="examples-section-label" text="Try an example" />
+                <ui:VisualElement name="examples-wrap" class="examples-wrap" />
+
+                <!-- Forge button -->
+                <ui:Button name="forge-btn" class="neon-btn">
+                    <ui:Label class="neon-btn-icon"  text="&#x26A1;" />
+                    <ui:Label name="forge-btn-label" class="neon-btn-label" text="Forge Game" />
+                </ui:Button>
+
+                <!-- Result -->
+                <ui:VisualElement name="result-box" class="result-banner success hidden">
+                    <ui:Label class="result-icon" text="&#x2714;" />
+                    <ui:Label name="result-text" class="result-text" text="" />
+                </ui:VisualElement>
+
+                <!-- Error -->
+                <ui:VisualElement name="error-box" class="result-banner error hidden">
+                    <ui:Label class="result-icon" style="color:rgb(255,69,96);" text="&#x26A0;" />
+                    <ui:Label name="error-text" class="result-text" text="" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="scroll-pad-bottom" />
+            </ui:VisualElement>
+        </ui:ScrollView>
+
+    </ui:VisualElement>
+</ui:UXML>

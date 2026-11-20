@@ -1,0 +1,180 @@
+<ui:UXML xmlns:ui="UnityEngine.UIElements" editor-extension-mode="False">
+    <ui:Style src="../USS/MobileStyles.uss" />
+
+    <ui:VisualElement name="games-root" class="screen-root">
+
+        <!-- Header -->
+        <ui:VisualElement class="screen-header">
+            <ui:Label class="screen-title" text="Explore" />
+        </ui:VisualElement>
+
+        <!-- Search bar (pill style) -->
+        <ui:VisualElement class="search-wrap">
+            <ui:Label class="search-icon" text="&#x1F50D;" />
+            <ui:TextField name="search-field" class="search-field"
+                          placeholder-text="Search games, items, people..." />
+            <ui:Button name="search-clear" class="search-clear-btn hidden" text="&#x2715;" />
+        </ui:VisualElement>
+
+        <!-- ── BROWSE VIEW — shown when search is empty ── -->
+        <ui:VisualElement name="browse-view" style="flex-grow:1; flex-direction:column;">
+
+            <ui:VisualElement class="games-subheader">
+                <ui:Label class="games-subheader-title" text="Trending games" />
+            </ui:VisualElement>
+
+            <!-- Loading skeletons -->
+            <ui:VisualElement name="games-loading" class="hidden"
+                              style="padding-left:20px; padding-right:20px;">
+                <ui:VisualElement class="skeleton-card">
+                    <ui:VisualElement class="skeleton-thumb" />
+                    <ui:VisualElement style="padding:12px; gap:8px;">
+                        <ui:VisualElement class="skeleton-line" />
+                        <ui:VisualElement class="skeleton-line skeleton-line-short" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="skeleton-card">
+                    <ui:VisualElement class="skeleton-thumb" />
+                    <ui:VisualElement style="padding:12px; gap:8px;">
+                        <ui:VisualElement class="skeleton-line" />
+                        <ui:VisualElement class="skeleton-line skeleton-line-short" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- Empty state -->
+            <ui:VisualElement name="games-empty" class="empty-box hidden">
+                <ui:Label name="empty-icon" class="empty-icon" text="&#x1F3AE;" />
+                <ui:Label name="empty-title" class="empty-title" text="No games found" />
+                <ui:Label name="empty-desc"  class="empty-desc"  text="Forge your first game!" />
+            </ui:VisualElement>
+
+            <!-- 2-column grid game list -->
+            <ui:ScrollView name="games-scroll" class="scroll-content hidden"
+                           vertical="true" horizontal="false"
+                           vertical-scroller-visibility="Hidden"
+                           horizontal-scroller-visibility="Hidden"
+                           mouse-wheel-scroll-size="120">
+                <ui:VisualElement name="games-list" class="games-grid"
+                                  style="padding-left:16px; padding-right:16px;" />
+                <ui:VisualElement class="scroll-pad-bottom" />
+            </ui:ScrollView>
+
+        </ui:VisualElement>
+
+        <!-- ── SEARCH VIEW — shown when query is active ── -->
+        <ui:VisualElement name="search-view" class="hidden"
+                          style="flex-grow:1; flex-direction:column;">
+
+            <!-- Global loading indicator -->
+            <ui:VisualElement name="search-loading" class="hidden"
+                              style="padding:20px; gap:14px;">
+                <ui:VisualElement class="skeleton-card" style="height:60px;">
+                    <ui:VisualElement class="skeleton-thumb" style="width:44px; height:44px; border-radius:22px; margin:8px;" />
+                    <ui:VisualElement style="flex-grow:1; padding:12px; gap:8px;">
+                        <ui:VisualElement class="skeleton-line" />
+                        <ui:VisualElement class="skeleton-line skeleton-line-short" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+                <ui:VisualElement class="skeleton-card" style="height:60px;">
+                    <ui:VisualElement class="skeleton-thumb" style="width:44px; height:44px; border-radius:8px; margin:8px;" />
+                    <ui:VisualElement style="flex-grow:1; padding:12px; gap:8px;">
+                        <ui:VisualElement class="skeleton-line" />
+                        <ui:VisualElement class="skeleton-line skeleton-line-short" />
+                    </ui:VisualElement>
+                </ui:VisualElement>
+            </ui:VisualElement>
+
+            <!-- No results state -->
+            <ui:VisualElement name="no-results" class="empty-box hidden">
+                <ui:Label class="empty-icon" text="&#x1F50D;" />
+                <ui:Label class="empty-title" text="No results" />
+                <ui:Label class="empty-desc" text="Try a different search term" />
+            </ui:VisualElement>
+
+            <ui:ScrollView name="search-scroll" class="scroll-content hidden"
+                           vertical="true" horizontal="false"
+                           vertical-scroller-visibility="Hidden"
+                           horizontal-scroller-visibility="Hidden"
+                           mouse-wheel-scroll-size="120">
+
+                <!-- People section -->
+                <ui:VisualElement name="people-section" class="explore-section hidden">
+                    <ui:Label class="explore-section-label" text="People" />
+                    <ui:VisualElement name="people-list" class="explore-people-list" />
+                </ui:VisualElement>
+
+                <!-- Items section -->
+                <ui:VisualElement name="items-section" class="explore-section hidden">
+                    <ui:Label class="explore-section-label" text="Items" />
+                    <ui:VisualElement name="items-list" class="explore-items-list" />
+                </ui:VisualElement>
+
+                <!-- Games section -->
+                <ui:VisualElement name="search-games-section" class="explore-section hidden">
+                    <ui:Label class="explore-section-label" text="Games" />
+                    <ui:VisualElement name="search-games-list" class="explore-games-list" />
+                </ui:VisualElement>
+
+                <ui:VisualElement class="scroll-pad-bottom" />
+            </ui:ScrollView>
+
+        </ui:VisualElement>
+
+        <!-- Game bottom sheet (injected at runtime; hidden by default) -->
+        <ui:VisualElement name="bottom-sheet-layer" class="hidden">
+            <ui:VisualElement name="sheet-backdrop" class="bottom-sheet-backdrop" />
+            <ui:VisualElement name="bottom-sheet" class="bottom-sheet">
+                <ui:VisualElement class="sheet-drag-handle">
+                    <ui:VisualElement class="drag-handle-bar" />
+                </ui:VisualElement>
+                <ui:Button name="sheet-close" class="sheet-close-btn">
+                    <ui:Label class="sheet-close-icon" text="&#x2715;" />
+                </ui:Button>
+                <ui:VisualElement name="sheet-thumb" class="sheet-thumb">
+                    <ui:Label name="sheet-thumb-icon" class="game-card-thumb-icon" text="&#x1F3AE;" />
+                </ui:VisualElement>
+                <ui:VisualElement class="sheet-info">
+                    <ui:Label name="sheet-title" class="sheet-game-title" text="" />
+                    <ui:VisualElement class="sheet-stats-row">
+                        <ui:VisualElement class="meta-item">
+                            <ui:Label class="meta-icon" text="&#x2764;" style="color: rgb(255,69,58);" />
+                            <ui:Label name="sheet-likes" class="meta-text" text="0" />
+                        </ui:VisualElement>
+                        <ui:VisualElement class="meta-item">
+                            <ui:Label class="meta-icon" text="&#x25B6;" style="color: rgb(48,209,88);" />
+                            <ui:Label name="sheet-plays" class="meta-text" text="0" />
+                        </ui:VisualElement>
+                    </ui:VisualElement>
+                    <ui:VisualElement class="sheet-creator-row">
+                        <ui:VisualElement name="sheet-creator-avatar" class="sheet-creator-avatar">
+                            <ui:Label name="sheet-creator-init" class="sheet-creator-initials" text="?" />
+                        </ui:VisualElement>
+                        <ui:Label name="sheet-creator" class="sheet-creator-name" text="" />
+                    </ui:VisualElement>
+                    <ui:Label name="sheet-desc" class="sheet-desc" text="" />
+                </ui:VisualElement>
+                <ui:VisualElement name="sheet-scripts-panel" class="hidden"
+                                  style="margin-top:12px; margin-left:20px; margin-right:20px;">
+                    <ui:Button name="sheet-scripts-toggle" class="scripts-toggle-btn">
+                        <ui:Label class="scripts-toggle-icon" text="&#x1F4DC;" />
+                        <ui:Label name="sheet-scripts-toggle-label" class="scripts-toggle-label"
+                                  text="View Luau Scripts" />
+                    </ui:Button>
+                    <ui:ScrollView name="sheet-scripts-scroll" class="hidden"
+                                   vertical="true" horizontal="false"
+                                   vertical-scroller-visibility="AlwaysVisible"
+                                   style="max-height:200px; background-color:rgb(28,28,30);
+                                          border-radius:8px; padding:10px; margin-top:8px;">
+                        <ui:Label name="sheet-scripts-text" class="scripts-text" text="" />
+                    </ui:ScrollView>
+                </ui:VisualElement>
+                <ui:Button name="sheet-play-btn" class="sheet-play-btn">
+                    <ui:Label class="sheet-play-btn-icon" text="&#x25B6;" />
+                    <ui:Label class="sheet-play-btn-text" text="Play" />
+                </ui:Button>
+            </ui:VisualElement>
+        </ui:VisualElement>
+
+    </ui:VisualElement>
+</ui:UXML>
